@@ -1,24 +1,16 @@
 const mysql = require("mysql2");
 const Sequelize = require("sequelize");
-const sequelize = new Sequelize("dragon", "root", "stopthisshit@ma", {
-  host: "localhost",
-  dialect: "mysql",
-});
+
+// Use environment variables for database configuration
+const sequelize = new Sequelize(
+  process.env.DB_NAME || "dragon",
+  process.env.DB_USER || "root", 
+  process.env.DB_PASSWORD || "",
+  {
+    host: process.env.DB_HOST || "localhost",
+    port: process.env.DB_PORT || 3306,
+    dialect: "mysql",
+  }
+);
 
 module.exports = sequelize;
-
-// const mysql = require("mysql2");
-// const Sequelize = require("sequelize");
-
-// const sequelize = new Sequelize(
-//   "defaultdb",
-//   "avnadmin",
-//   "AVNS_TGdmfc9bL_ZqfA24MUP",
-//   {
-//     host: "mysql-mario-dragon801.g.aivencloud.com",
-//     port: 10883,
-//     dialect: "mysql",
-//   }
-// );
-
-// module.exports = sequelize;
