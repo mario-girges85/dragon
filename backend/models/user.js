@@ -1,21 +1,26 @@
+// backend/models/user.js
+
 const Sequelize = require("sequelize");
 const sequelize = require("../util/db");
 
+// FIXED: Changed model name from "user" to "User" for consistency
 const User = sequelize.define(
-  "user",
+  "User",
   {
     id: {
-      type: Sequelize.INTEGER,
-      autoIncrement: true,
+      type: Sequelize.DataTypes.UUID,
+      defaultValue: Sequelize.DataTypes.UUIDV4,
       primaryKey: true,
+      allowNull: false,
     },
+    // ... all other fields remain the same
     name: {
       type: Sequelize.STRING,
       allowNull: false,
     },
     email: {
       type: Sequelize.STRING,
-      allowNull: true, // Made optional as per your form
+      allowNull: true,
       unique: true,
     },
     phone: {
@@ -41,31 +46,15 @@ const User = sequelize.define(
       defaultValue: "user",
       comment: "User role",
     },
-    orders: {
-      type: Sequelize.JSON,
-      allowNull: true,
-      comment: "Array of user orders",
-    },
+    // REMOVED: The 'orders' column is not needed here as it's handled by associations
   },
   {
-    timestamps: true, // Adds createdAt and updatedAt
+    timestamps: true,
     tableName: "users",
   }
 );
 
+// This function is not needed if you sync in index.js
+// module.exports.ensureUserTable = ensureUserTable;
+
 module.exports = User;
-
-// Utility to check and create table if not exists
-async function ensureUserTable() {
-  const tableName = User.getTableName();
-  const queryInterface = sequelize.getQueryInterface();
-  const tables = await queryInterface.showAllTables();
-  if (!tables.includes(tableName)) {
-    await User.sync();
-    console.log(`Table '${tableName}' created.`);
-  } else {
-    console.log(`Table '${tableName}' already exists.`);
-  }
-}
-
-module.exports.ensureUserTable = ensureUserTable;

@@ -1,9 +1,18 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
-const roleOptions = ["user", "admin", "manager"];
+const roleOptions = ["user", "delivery", "admin"];
+
+// Arabic translations for roles
+const roleTranslations = {
+  user: "مستخدم",
+  delivery: "مندوب توصيل",
+  admin: "مدير",
+};
 
 const UsersTable = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -132,8 +141,13 @@ const UsersTable = () => {
                       style={{ background: "#fff" }}
                     />
                   </td>
-                  <td className="py-4 px-4 font-bold text-[#8b6914] text-lg">
-                    {user.name}
+                  <td className="py-4 px-4">
+                    <button
+                      onClick={() => navigate(`/users/${user.id}`)}
+                      className="font-bold text-[#8b6914] text-lg hover:text-[#6b5010] hover:underline transition-all duration-200 cursor-pointer"
+                    >
+                      {user.name}
+                    </button>
                   </td>
                   <td className="py-4 px-4 text-[#a67c00] font-medium text-base">
                     {user.phone}
@@ -145,10 +159,11 @@ const UsersTable = () => {
                         handleRoleChange(user.id, e.target.value)
                       }
                       className="border-2 border-[#f5d5a8] rounded-lg px-4 py-2 text-[#8b6914] bg-white focus:ring-2 focus:ring-[#8b6914] font-semibold shadow-sm"
+                      dir="rtl"
                     >
                       {roleOptions.map((role) => (
                         <option key={role} value={role}>
-                          {role}
+                          {roleTranslations[role]}
                         </option>
                       ))}
                     </select>

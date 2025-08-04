@@ -3,8 +3,8 @@
 const path = require("path");
 const multer = require("multer");
 const fs = require("fs");
-const Order = require("../models/order"); // FIXED: Use the correct, standardized model name 'Order'
-
+const Order = require("../models/order");
+const User = require("../models/user"); // Import the User model
 // Multer configuration for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -101,12 +101,91 @@ exports.getAllOrders = async (req, res) => {
   try {
     const orders = await Order.findAll({
       order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: User, // This will now correctly attach the data as a "User" property
+          attributes: ["name", "profile_image"],
+        },
+      ],
     });
-    res.status(200).json({ success: true, orders });
+
+    // Convert profile images to base64 for each order's user
+    const ordersWithUserImages = orders.map((order) => {
+      const orderObj = order.toJSON();
+      if (
+        orderObj.User &&
+        orderObj.User.profile_image &&
+        fs.existsSync(orderObj.User.profile_image)
+      ) {
+        try {
+          const imageData = fs.readFileSync(orderObj.User.profile_image);
+          orderObj.User.profileImageBase64 = `data:image/jpeg;base64,${imageData.toString(
+            "base64"
+          )}`;
+        } catch (imgErr) {
+          console.error("Error reading profile image:", imgErr);
+          orderObj.User.profileImageBase64 = null;
+        }
+      } else {
+        orderObj.User.profileImageBase64 = null;
+      }
+      return orderObj;
+    });
+
+    res.status(200).json({ success: true, orders: ordersWithUserImages });
   } catch (error) {
+    console.error("Error fetching orders with user data:", error);
     res
       .status(500)
       .json({ success: false, message: "Failed to fetch orders." });
+  }
+};
+
+// Get orders by user ID
+exports.getOrdersByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const orders = await Order.findAll({
+      where: { userId: userId },
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: User,
+          attributes: ["name", "profile_image"],
+        },
+      ],
+    });
+
+    // Convert profile images to base64 for each order's user
+    const ordersWithUserImages = orders.map((order) => {
+      const orderObj = order.toJSON();
+      if (
+        orderObj.User &&
+        orderObj.User.profile_image &&
+        fs.existsSync(orderObj.User.profile_image)
+      ) {
+        try {
+          const imageData = fs.readFileSync(orderObj.User.profile_image);
+          orderObj.User.profileImageBase64 = `data:image/jpeg;base64,${imageData.toString(
+            "base64"
+          )}`;
+        } catch (imgErr) {
+          console.error("Error reading profile image:", imgErr);
+          orderObj.User.profileImageBase64 = null;
+        }
+      } else {
+        orderObj.User.profileImageBase64 = null;
+      }
+      return orderObj;
+    });
+
+    res.status(200).json({ success: true, orders: ordersWithUserImages });
+  } catch (error) {
+    console.error("Error fetching orders by user ID:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch user orders." });
   }
 };
 

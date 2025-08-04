@@ -88,7 +88,8 @@ const Order = sequelize.define(
     },
     userId: {
       // This links the order to the user who created it
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
+
       allowNull: false, // An order should always have a user
     },
   },

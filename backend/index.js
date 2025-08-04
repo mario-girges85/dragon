@@ -7,10 +7,17 @@ const path = require("path");
 // --- Database & Models ---
 const sequelize = require("./util/db");
 // NEW: Import all models to ensure Sequelize is aware of them before sync
-require("./models/user");
-require("./models/order");
+const User = require("./models/user");
+const Order = require("./models/order");
 
+// --- NEW: Define model associations ---
+// This tells Sequelize a User can have many Orders
+User.hasMany(Order, { foreignKey: "userId" });
+// This tells Sequelize an Order belongs to one User
+Order.belongsTo(User, { foreignKey: "userId" });
+// ------------------------------------
 // --- Routes ---
+
 const usersRouter = require("./routes/users");
 const orderRouter = require("./routes/order");
 

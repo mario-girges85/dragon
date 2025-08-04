@@ -11,8 +11,11 @@ router.use(verifyToken);
 // POST /api/orders/new - Create a new order
 router.post("/new", orderController.newOrder);
 
-// GET /api/orders - Get all orders
-router.get("/", orderController.getAllOrders);
+// GET /api/orders/getall - Get all orders
+router.get("/getall", orderController.getAllOrders);
+
+// GET /api/orders/user/:userId - Get orders by user ID
+router.get("/user/:userId", orderController.getOrdersByUserId);
 
 // GET /api/orders/:id - Get order by ID
 router.get("/:id", orderController.getOrderById);

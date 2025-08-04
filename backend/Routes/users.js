@@ -11,6 +11,9 @@ usersRouter.get("/getall", usersController.getAllUsers);
 // Define a route for deleting a user by ID
 usersRouter.delete("/delete/:id", usersController.deleteUserById);
 
+// Define a route for getting a user by ID
+usersRouter.get("/:id", usersController.getUserById);
+
 // Define a route for login and JWT
 usersRouter.post("/login", usersController.loginUser);
 module.exports = usersRouter;

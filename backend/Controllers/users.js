@@ -159,9 +159,55 @@ exports.deleteUserById = async (req, res) => {
   }
 };
 
+// Get user by ID
+exports.getUserById = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findByPk(userId, {
+      attributes: { exclude: ["password"] }, // Exclude password from response
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Convert user to JSON and handle profile image
+    const userObj = user.toJSON();
+
+    // Convert profile image to base64 if exists
+    if (userObj.profile_image && fs.existsSync(userObj.profile_image)) {
+      try {
+        const imageData = fs.readFileSync(userObj.profile_image);
+        userObj.profileImageBase64 = `data:image/jpeg;base64,${imageData.toString(
+          "base64"
+        )}`;
+      } catch (imgErr) {
+        console.error("Error reading profile image:", imgErr);
+        userObj.profileImageBase64 = null;
+      }
+    } else {
+      userObj.profileImageBase64 = null;
+    }
+
+    res.status(200).json({
+      success: true,
+      user: userObj,
+    });
+  } catch (err) {
+    console.error("Error fetching user by ID:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching user",
+      error: err.message,
+    });
+  }
+};
+
 // Secret for JWT — keep this in env vars in production
 const JWT_SECRET = process.env.JWT_SECRET || "your_super_secret_key";
-const JWT_EXPIRES_IN = "1h"; // adjust as needed
 
 exports.loginUser = async (req, res) => {
   try {

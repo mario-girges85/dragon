@@ -9,6 +9,7 @@ import {
   LogOut,
   Settings,
   Bell,
+  Zap,
 } from "lucide-react";
 import axios from "axios";
 
@@ -123,7 +124,7 @@ const Navbar = () => {
                   : "bg-white/10 backdrop-blur-sm"
               } group-hover:scale-110`}
             >
-              <Package
+              <Zap
                 className={`w-6 h-6 ${scrolled ? "text-white" : "text-white"}`}
               />
             </div>
@@ -132,7 +133,7 @@ const Navbar = () => {
                 scrolled ? "text-gray-800" : "text-white"
               }`}
             >
-              شحن الآن
+              دراجون
             </span>
           </div>
 
@@ -187,7 +188,12 @@ const Navbar = () => {
                       <img
                         src={avatarSrc || "/default-avatar.png"}
                         alt="avatar"
-                        className="w-8 h-8 rounded-full border-2 border-white/20 object-cover"
+                        className="w-8 h-8 rounded-full border-2 border-white/20 object-cover cursor-pointer hover:scale-110 transition-transform"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDropdownOpen(false);
+                          navigate(`/users/${user.id}`);
+                        }}
                       />
                     </div>
                     <div className="text-right">
@@ -221,7 +227,11 @@ const Navbar = () => {
                           <img
                             src={avatarSrc || "/default-avatar.png"}
                             alt="avatar"
-                            className="w-10 h-10 rounded-full object-cover"
+                            className="w-10 h-10 rounded-full object-cover cursor-pointer hover:scale-110 transition-transform"
+                            onClick={() => {
+                              setDropdownOpen(false);
+                              navigate(`/users/${user.id}`);
+                            }}
                           />
                           <div>
                             <div className="font-semibold text-gray-800">
@@ -238,7 +248,7 @@ const Navbar = () => {
                         <button
                           onClick={() => {
                             setDropdownOpen(false);
-                            navigate("/profile");
+                            navigate(`/users/${user.id}`);
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-gray-50 transition-colors"
                         >
@@ -339,7 +349,11 @@ const Navbar = () => {
                     <img
                       src={avatarSrc || "/default-avatar.png"}
                       alt="avatar"
-                      className="w-10 h-10 rounded-full object-cover"
+                      className="w-10 h-10 rounded-full object-cover cursor-pointer hover:scale-110 transition-transform"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        navigate(`/users/${user.id}`);
+                      }}
                     />
                     <div>
                       <div className="font-semibold text-gray-800">
@@ -352,7 +366,7 @@ const Navbar = () => {
                   <button
                     onClick={() => {
                       setIsMenuOpen(false);
-                      navigate("/profile");
+                      navigate(`/users/${user.id}`);
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 text-right rounded-lg hover:bg-gray-50 transition-colors"
                   >
