@@ -1,39 +1,46 @@
+// backend/index.js
+
 const express = require("express");
-const usersRouter = require("./Routes/users");
-const orderRouter = require("./Routes/order");
-const app = express();
-const port = 3000;
-const db = require("./util/db");
-const sequelize = require("./util/db");
 const cors = require("cors");
 const path = require("path");
-const session = require("express-session");
-const { ensureUserTable } = require("./models/user");
 
-app.use(express.json());
+// --- Database & Models ---
+const sequelize = require("./util/db");
+// NEW: Import all models to ensure Sequelize is aware of them before sync
+require("./models/user");
+require("./models/order");
+
+// --- Routes ---
+const usersRouter = require("./routes/users");
+const orderRouter = require("./routes/order");
+
+const app = express();
+const port = 3000;
+
+// --- Core Middleware ---
 app.use(
   cors({
-    origin: "http://localhost:5173", // must match frontend URL
+    origin: "http://localhost:5173", // Your frontend URL
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+app.use(express.json()); // for parsing application/json
+app.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 
-app.use(express.urlencoded({ extended: false }));
+// NEW: Serve uploaded files statically
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+// --- API Routes ---
 app.use("/users", usersRouter);
 app.use("/orders", orderRouter);
-sequelize
-  .sync()
-  .then((res) => {
-    // console.log("Database synchronized : ", res);
-  })
-  .catch((err) => {
-    console.error("Database synchronization failed:", err);
-  });
 
-app.listen(port, () => {
-  ensureUserTable();
-  console.log(`Server is running on http://localhost:${port}`);
+// --- Server & DB Sync ---
+app.listen(port, async () => {
+  try {
+    await sequelize.sync(); // BEST PRACTICE: Sync database on server start
+    console.log("Database synchronized successfully.");
+    console.log(`Server is running on http://localhost:${port}`);
+  } catch (error) {
+    console.error("Database synchronization failed:", error);
+  }
 });
