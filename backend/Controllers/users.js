@@ -29,69 +29,159 @@ exports.newUser = [
     try {
       const { name, email, phone, password, address } = req.body;
 
-      // Check if user exists by email or phone
-      const existingUser = await User.findOne({
-        where: {
-          email: email,
-        },
-      });
-      const existingUserByPhone = await User.findOne({
-        where: {
-          phone: phone,
-        },
-      });
-
-      if (existingUser || existingUserByPhone) {
-        return res.status(409).json({ message: "الحساب موجود بالفعل" });
+      // Validate required fields
+      if (!name || !phone || !password || !address) {
+        return res.status(400).json({
+          success: false,
+          message: "جميع الحقول مطلوبة ما عدا البريد الإلكتروني",
+        });
       }
 
-      // User doesn't exist, now save the file if it exists
+      // Validate email format if provided
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: "صيغة البريد الإلكتروني غير صحيحة",
+        });
+      }
+
+      // Check for existing user by email (only if email is provided)
+      if (email) {
+        const existingUserByEmail = await User.findOne({
+          where: { email: email },
+        });
+
+        if (existingUserByEmail) {
+          return res.status(409).json({
+            success: false,
+            message: "البريد الإلكتروني مستخدم بالفعل",
+          });
+        }
+      }
+
+      // Check for existing user by phone
+      const existingUserByPhone = await User.findOne({
+        where: { phone: phone },
+      });
+
+      if (existingUserByPhone) {
+        return res.status(409).json({
+          success: false,
+          message: "رقم الهاتف مستخدم بالفعل",
+        });
+      }
+
+      // Handle profile image upload
       let profileImagePath = null;
       if (req.file) {
-        const username = name || "profile";
-        const ext = path.extname(req.file.originalname);
-        const filename = `${username}${ext}`;
-        profileImagePath = path.join("uploads", "profiles", filename);
+        try {
+          const username = name.replace(/[^a-zA-Z0-9]/g, "_") || "profile";
+          const ext = path.extname(req.file.originalname);
+          const timestamp = Date.now();
+          const filename = `${username}_${timestamp}${ext}`;
+          profileImagePath = path.join("uploads", "profiles", filename);
 
-        // Ensure uploads directory exists
-        if (!fs.existsSync("uploads")) {
-          fs.mkdirSync("uploads", { recursive: true });
+          // Ensure uploads/profiles directory exists
+          const uploadsDir = path.join("uploads", "profiles");
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+
+          // Write file to disk
+          fs.writeFileSync(profileImagePath, req.file.buffer);
+        } catch (fileError) {
+          console.error("File upload error:", fileError);
+          return res.status(500).json({
+            success: false,
+            message: "خطأ في رفع الصورة الشخصية",
+          });
         }
-
-        // Write file to disk
-        fs.writeFileSync(profileImagePath, req.file.buffer);
       }
 
       // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
-
+      let hashedPassword;
       try {
-        const user = await User.create({
-          name,
-          email,
-          phone,
-          password: hashedPassword,
-          address,
-          profile_image: profileImagePath,
-        });
-        res
-          .status(201)
-          .json({ message: "تم إنشاء المستخدم", user, success: true });
-      } catch (dbErr) {
-        // If database error occurs, delete the uploaded file
+        hashedPassword = await bcrypt.hash(password, 12);
+      } catch (hashError) {
+        console.error("Password hashing error:", hashError);
+        // Clean up uploaded file if password hashing fails
         if (profileImagePath && fs.existsSync(profileImagePath)) {
           fs.unlinkSync(profileImagePath);
         }
-        console.error("Database error:", dbErr);
-        res
-          .status(500)
-          .json({ message: "Database error", error: dbErr.message });
+        return res.status(500).json({
+          success: false,
+          message: "خطأ في معالجة كلمة المرور",
+        });
       }
+
+      // Create user in database
+      let user;
+      try {
+        user = await User.create({
+          name: name.trim(),
+          email: email ? email.trim() : null,
+          phone: phone.trim(),
+          password: hashedPassword,
+          address: address.trim(),
+          profile_image: profileImagePath,
+          role: "user", // Default role
+        });
+      } catch (dbError) {
+        console.error("Database creation error:", dbError);
+
+        // Clean up uploaded file if database creation fails
+        if (profileImagePath && fs.existsSync(profileImagePath)) {
+          fs.unlinkSync(profileImagePath);
+        }
+
+        // Handle specific database errors
+        if (dbError.name === "SequelizeUniqueConstraintError") {
+          const field = dbError.fields
+            ? Object.keys(dbError.fields)[0]
+            : "unknown";
+          if (field === "email") {
+            return res.status(409).json({
+              success: false,
+              message: "البريد الإلكتروني مستخدم بالفعل",
+            });
+          } else if (field === "phone") {
+            return res.status(409).json({
+              success: false,
+              message: "رقم الهاتف مستخدم بالفعل",
+            });
+          }
+        }
+
+        return res.status(500).json({
+          success: false,
+          message: "خطأ في إنشاء الحساب",
+        });
+      }
+
+      // Prepare response user object (exclude password)
+      const userResponse = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        address: user.address,
+        profile_image: user.profile_image,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      };
+
+      res.status(201).json({
+        success: true,
+        message: "تم إنشاء الحساب بنجاح",
+        user: userResponse,
+      });
     } catch (err) {
-      console.error("Error creating user:", err);
-      res
-        .status(500)
-        .json({ message: "Error creating user", error: err.message });
+      console.error("Unexpected error in newUser:", err);
+      res.status(500).json({
+        success: false,
+        message: "حدث خطأ غير متوقع",
+      });
     }
   },
 ];

@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Package, Truck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 // Stats Component
 const Stats = () => (
@@ -58,7 +59,7 @@ const Package3D = () => (
 );
 
 // Hero Content Component
-const HeroContent = () => (
+const HeroContent = ({ user, navigate }) => (
   <div className="flex-1 max-w-xl text-right" dir="rtl">
     <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
       اشحن طردك مع دراجون الآن
@@ -67,14 +68,48 @@ const HeroContent = () => (
       نحن نوفر أفضل خدمات الشحن السريع والآمن إلى جميع أنحاء العالم. مع خبرة
       تزيد عن 15 عاماً في مجال الشحن والتوصيل.
     </p>
-    <button className="bg-[#8b6914] hover:bg-[#6b5010] text-white px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg">
-      ابدأ الآن
+    <button
+      onClick={() => (user ? navigate("/createorder") : navigate("/signup"))}
+      className="bg-[#8b6914] hover:bg-[#6b5010] text-white px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
+    >
+      {user ? "إنشاء طلب" : "إنشاء حساب"}
     </button>
   </div>
 );
 
 // Main Home Component
 const Home = () => {
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
+
+  // Load user from localStorage
+  useEffect(() => {
+    const loadUserFromStorage = () => {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        try {
+          setUser(JSON.parse(stored));
+        } catch {
+          localStorage.removeItem("user");
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
+    };
+
+    loadUserFromStorage();
+
+    const handler = () => {
+      loadUserFromStorage();
+    };
+    window.addEventListener("authChanged", handler);
+
+    return () => {
+      window.removeEventListener("authChanged", handler);
+    };
+  }, []);
+
   return (
     <div
       className="min-h-screen bg-gradient-to-br from-[#edc494] via-[#d4a574] to-[#c19a5b] relative overflow-hidden pt-20"
@@ -87,7 +122,7 @@ const Home = () => {
       {/* Main content */}
       <main className="px-6 py-12 max-w-7xl mx-auto relative z-10">
         <div className="flex flex-col lg:flex-row-reverse items-center justify-between min-h-[70vh] space-y-12 lg:space-y-0 lg:space-x-12 lg:space-x-reverse">
-          <HeroContent />
+          <HeroContent user={user} navigate={navigate} />
 
           <div className="flex-1 flex items-center justify-center relative">
             <Package3D />

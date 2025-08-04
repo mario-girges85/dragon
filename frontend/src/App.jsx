@@ -7,6 +7,8 @@ import Navbar from "./components/Navbar";
 import CreateOrder from "./pages/CreateOrder";
 import OrdersPage from "./pages/OrdersPage";
 import Profile from "./pages/Profile";
+import MyProfile from "./pages/MyProfile";
+import ProtectedRoute from "./components/ProtectedRoute";
 const App = () => {
   // console.log(import.meta.env.VITE_NEWUSER); // Log the environment variable for debugging
   return (
@@ -16,10 +18,46 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/users" element={<Users />} />
-        <Route path="/users/:id" element={<Profile />} />
-        <Route path="/createorder" element={<CreateOrder />} />
-        <Route path="/orders" element={<OrdersPage />} />
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute requireAdmin={true}>
+              <Users />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <MyProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users/:id"
+          element={
+            <ProtectedRoute requireAdmin={true}>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/createorder"
+          element={
+            <ProtectedRoute>
+              <CreateOrder />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/orders"
+          element={
+            <ProtectedRoute>
+              <OrdersPage />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </div>
   );

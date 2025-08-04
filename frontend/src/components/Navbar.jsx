@@ -95,9 +95,15 @@ const Navbar = () => {
 
   const navLinks = [
     { href: "/", label: "الرئيسية", active: true },
-    { href: "/orders", label: "الطلبات" },
-    { href: "/users", label: "المستخدمين" },
-    { href: "/createorder", label: "إنشاء طلب" },
+    ...(user
+      ? [
+          { href: "/orders", label: "الطلبات" },
+          ...(user.role === "admin"
+            ? [{ href: "/users", label: "المستخدمين" }]
+            : []),
+          { href: "/createorder", label: "إنشاء طلب" },
+        ]
+      : []),
     { href: "#", label: "اتصل بنا" },
   ];
 
@@ -192,7 +198,7 @@ const Navbar = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           setDropdownOpen(false);
-                          navigate(`/users/${user.id}`);
+                          navigate("/profile");
                         }}
                       />
                     </div>
@@ -230,7 +236,7 @@ const Navbar = () => {
                             className="w-10 h-10 rounded-full object-cover cursor-pointer hover:scale-110 transition-transform"
                             onClick={() => {
                               setDropdownOpen(false);
-                              navigate(`/users/${user.id}`);
+                              navigate("/profile");
                             }}
                           />
                           <div>
@@ -248,7 +254,7 @@ const Navbar = () => {
                         <button
                           onClick={() => {
                             setDropdownOpen(false);
-                            navigate(`/users/${user.id}`);
+                            navigate("/profile");
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-gray-50 transition-colors"
                         >

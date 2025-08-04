@@ -79,6 +79,7 @@ const LoginForm = () => {
           id: returnedUser.id,
           name: returnedUser.name,
           email: returnedUser.email,
+          role: returnedUser.role, // Add role to stored user data
           profile_image_base64: returnedUser.profile_image_base64,
           token,
         };
