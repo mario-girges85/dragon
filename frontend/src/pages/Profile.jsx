@@ -137,11 +137,20 @@ const Profile = () => {
 
             {/* Profile Image */}
             <div className="mb-4 sm:mb-6">
-              {user?.profileImageBase64 ? (
+              {user?.profile_image_base64 ? (
                 <img
-                  src={user.profileImageBase64}
+                  src={
+                    user.profile_image_base64.startsWith("data:")
+                      ? user.profile_image_base64
+                      : user.profile_image_base64.startsWith("http")
+                      ? user.profile_image_base64
+                      : `data:image/jpeg;base64,${user.profile_image_base64}`
+                  }
                   alt={user.name}
                   className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover mx-auto border-4 border-[#c19a5b] shadow-lg"
+                  onError={(e) => {
+                    e.target.src = "/avatar.png";
+                  }}
                 />
               ) : (
                 <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gray-200 flex items-center justify-center mx-auto border-4 border-[#c19a5b] shadow-lg">

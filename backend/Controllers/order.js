@@ -119,15 +119,15 @@ exports.getAllOrders = async (req, res) => {
       ) {
         try {
           const imageData = fs.readFileSync(orderObj.User.profile_image);
-          orderObj.User.profileImageBase64 = `data:image/jpeg;base64,${imageData.toString(
+          orderObj.User.profile_image_base64 = `data:image/jpeg;base64,${imageData.toString(
             "base64"
           )}`;
         } catch (imgErr) {
           console.error("Error reading profile image:", imgErr);
-          orderObj.User.profileImageBase64 = null;
+          orderObj.User.profile_image_base64 = null;
         }
       } else {
-        orderObj.User.profileImageBase64 = null;
+        orderObj.User.profile_image_base64 = null;
       }
       return orderObj;
     });
@@ -167,15 +167,15 @@ exports.getOrdersByUserId = async (req, res) => {
       ) {
         try {
           const imageData = fs.readFileSync(orderObj.User.profile_image);
-          orderObj.User.profileImageBase64 = `data:image/jpeg;base64,${imageData.toString(
+          orderObj.User.profile_image_base64 = `data:image/jpeg;base64,${imageData.toString(
             "base64"
           )}`;
         } catch (imgErr) {
           console.error("Error reading profile image:", imgErr);
-          orderObj.User.profileImageBase64 = null;
+          orderObj.User.profile_image_base64 = null;
         }
       } else {
-        orderObj.User.profileImageBase64 = null;
+        orderObj.User.profile_image_base64 = null;
       }
       return orderObj;
     });

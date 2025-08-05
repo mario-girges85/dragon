@@ -85,11 +85,20 @@ const OrderCard = ({ order }) => {
       <div className="pt-5 mt-5 border-t border-gray-200">
         <div className="flex items-center">
           {/* Display user profile image if it exists */}
-          {order.User?.profileImageBase64 ? (
+          {order.User?.profile_image_base64 ? (
             <img
-              src={order.User.profileImageBase64}
+              src={
+                order.User.profile_image_base64.startsWith("data:")
+                  ? order.User.profile_image_base64
+                  : order.User.profile_image_base64.startsWith("http")
+                  ? order.User.profile_image_base64
+                  : `data:image/jpeg;base64,${order.User.profile_image_base64}`
+              }
               alt={order.User.name}
               className="w-10 h-10 rounded-full object-cover"
+              onError={(e) => {
+                e.target.src = "/avatar.png";
+              }}
             />
           ) : (
             // Fallback icon if no image

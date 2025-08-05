@@ -31,11 +31,41 @@ const UsersTable = () => {
       });
   }, []);
 
-  const handleRoleChange = async (userId, newRole) => {
+  const handleRoleChange = async (userId, newRole, currentRole, userName) => {
+    // Show confirmation dialog
+    const roleTranslations = {
+      user: "مستخدم",
+      delivery: "مندوب توصيل",
+      admin: "مدير",
+    };
+
+    const currentRoleText = roleTranslations[currentRole] || currentRole;
+    const newRoleText = roleTranslations[newRole] || newRole;
+
+    const confirmMessage = `هل أنت متأكد من تغيير دور المستخدم "${userName}" من "${currentRoleText}" إلى "${newRoleText}"؟`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
     try {
-      await axios.put(`${import.meta.env.VITE_ALLUSER}/${userId}/role`, {
-        role: newRole,
-      });
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("يرجى تسجيل الدخول مرة أخرى");
+        return;
+      }
+
+      await axios.put(
+        `${import.meta.env.VITE_USERS_BASE}/${userId}/role`,
+        {
+          role: newRole,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       // Update the user's role in the local state
       setUsers((prevUsers) =>
@@ -43,9 +73,16 @@ const UsersTable = () => {
           user.id === userId ? { ...user, role: newRole } : user
         )
       );
+
+      // Show success message
+      alert("تم تحديث دور المستخدم بنجاح");
     } catch (error) {
       console.error("Error updating user role:", error);
-      alert("فشل في تحديث دور المستخدم");
+      if (error.response?.status === 403) {
+        alert("ليس لديك صلاحية لتغيير أدوار المستخدمين");
+      } else {
+        alert("فشل في تحديث دور المستخدم");
+      }
     }
   };
 
@@ -156,7 +193,12 @@ const UsersTable = () => {
                     <select
                       value={user.role}
                       onChange={(e) =>
-                        handleRoleChange(user.id, e.target.value)
+                        handleRoleChange(
+                          user.id,
+                          e.target.value,
+                          user.role,
+                          user.name
+                        )
                       }
                       className="border-2 border-[#f5d5a8] rounded-lg px-4 py-2 text-[#8b6914] bg-white focus:ring-2 focus:ring-[#8b6914] font-semibold shadow-sm"
                       dir="rtl"

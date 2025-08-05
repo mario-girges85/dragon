@@ -25,8 +25,9 @@ const OrdersPage = () => {
 
   useEffect(() => {
     const fetchOrders = async () => {
-      // Get the authentication token from localStorage
+      // Get the authentication token and user info from localStorage
       const token = localStorage.getItem("token");
+      const userStr = localStorage.getItem("user");
 
       if (!token) {
         setError("You must be logged in to view orders.");
@@ -34,14 +35,35 @@ const OrdersPage = () => {
         return;
       }
 
+      if (!userStr) {
+        setError("User information not found. Please log in again.");
+        setLoading(false);
+        return;
+      }
+
       try {
-        // Fetch data from the API endpoint defined in your .env file
-        const response = await axios.get(import.meta.env.VITE_ALLORDERS, {
-          headers: {
-            // Include the authorization header for protected routes
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const user = JSON.parse(userStr);
+        let response;
+
+        // Check user role and fetch orders accordingly
+        if (user.role === "admin") {
+          // Admin can see all orders
+          response = await axios.get(import.meta.env.VITE_ALLORDERS, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        } else {
+          // User and delivery can only see their own orders
+          response = await axios.get(
+            `${import.meta.env.VITE_ORDERS_BY_USERID}${user.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+        }
 
         if (response.data.success) {
           setOrders(response.data.orders);
@@ -230,8 +252,39 @@ const OrdersPage = () => {
             </h1>
           </div>
           <p className="text-white/90 text-base sm:text-lg max-w-2xl mx-auto">
-            إدارة وتتبع جميع طلبات الشحن الخاصة بك
+            {(() => {
+              const userStr = localStorage.getItem("user");
+              if (userStr) {
+                const user = JSON.parse(userStr);
+                if (user.role === "admin") {
+                  return "إدارة وتتبع جميع طلبات الشحن في النظام";
+                } else {
+                  return "إدارة وتتبع طلبات الشحن الخاصة بك";
+                }
+              }
+              return "إدارة وتتبع طلبات الشحن الخاصة بك";
+            })()}
           </p>
+          {/* Role Indicator */}
+          {(() => {
+            const userStr = localStorage.getItem("user");
+            if (userStr) {
+              const user = JSON.parse(userStr);
+              const roleTranslations = {
+                user: "مستخدم",
+                delivery: "مندوب توصيل",
+                admin: "مدير",
+              };
+              return (
+                <div className="mt-2">
+                  <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white/90 text-sm font-medium">
+                    {roleTranslations[user.role] || user.role}
+                  </span>
+                </div>
+              );
+            }
+            return null;
+          })()}
         </div>
 
         {/* Statistics Cards */}
@@ -442,17 +495,46 @@ const OrdersPage = () => {
               <Package className="w-8 h-8 sm:w-10 sm:h-10 text-white/60" />
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 sm:mb-3">
-              لا يوجد لديك أي طلبات حتى الآن
+              {(() => {
+                const userStr = localStorage.getItem("user");
+                if (userStr) {
+                  const user = JSON.parse(userStr);
+                  if (user.role === "admin") {
+                    return "لا توجد أي طلبات في النظام حتى الآن";
+                  }
+                }
+                return "لا يوجد لديك أي طلبات حتى الآن";
+              })()}
             </h2>
             <p className="text-white/80 text-sm sm:text-base mb-6">
-              عندما تقوم بإنشاء طلب جديد، سيظهر هنا
+              {(() => {
+                const userStr = localStorage.getItem("user");
+                if (userStr) {
+                  const user = JSON.parse(userStr);
+                  if (user.role === "admin") {
+                    return "عندما يقوم المستخدمون بإنشاء طلبات جديدة، ستظهر هنا";
+                  }
+                }
+                return "عندما تقوم بإنشاء طلب جديد، سيظهر هنا";
+              })()}
             </p>
-            <button
-              onClick={() => (window.location.href = "/createorder")}
-              className="px-6 py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-medium transition-colors duration-200"
-            >
-              إنشاء طلب جديد
-            </button>
+            {(() => {
+              const userStr = localStorage.getItem("user");
+              if (userStr) {
+                const user = JSON.parse(userStr);
+                if (user.role !== "admin") {
+                  return (
+                    <button
+                      onClick={() => (window.location.href = "/createorder")}
+                      className="px-6 py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-medium transition-colors duration-200"
+                    >
+                      إنشاء طلب جديد
+                    </button>
+                  );
+                }
+              }
+              return null;
+            })()}
           </div>
         )}
       </div>

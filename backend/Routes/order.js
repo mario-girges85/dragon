@@ -3,7 +3,7 @@
 const express = require("express");
 const router = express.Router();
 const orderController = require("../Controllers/order");
-const verifyToken = require("../Controllers/tokenVerify"); // REFACTORED: Import middleware
+const { verifyToken } = require("../Controllers/tokenVerify"); // REFACTORED: Import middleware
 
 // Apply authentication middleware to all order routes
 router.use(verifyToken);

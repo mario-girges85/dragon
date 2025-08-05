@@ -271,15 +271,13 @@ exports.getUserById = async (req, res) => {
     if (userObj.profile_image && fs.existsSync(userObj.profile_image)) {
       try {
         const imageData = fs.readFileSync(userObj.profile_image);
-        userObj.profileImageBase64 = `data:image/jpeg;base64,${imageData.toString(
-          "base64"
-        )}`;
+        userObj.profile_image_base64 = imageData.toString("base64");
       } catch (imgErr) {
         console.error("Error reading profile image:", imgErr);
-        userObj.profileImageBase64 = null;
+        userObj.profile_image_base64 = null;
       }
     } else {
-      userObj.profileImageBase64 = null;
+      userObj.profile_image_base64 = null;
     }
 
     res.status(200).json({
@@ -360,3 +358,227 @@ exports.loginUser = async (req, res) => {
       .json({ message: "خطأ في تسجيل الدخول", error: err.message });
   }
 };
+
+// Change user role endpoint
+exports.changeUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    // Validate role
+    const validRoles = ["user", "delivery", "admin"];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "الدور غير صحيح. الأدوار المتاحة: user, delivery, admin",
+      });
+    }
+
+    // Find user by ID
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "المستخدم غير موجود",
+      });
+    }
+
+    // Update user role
+    await user.update({ role });
+
+    // Prepare response user object (exclude password)
+    const userResponse = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      address: user.address,
+      profile_image: user.profile_image,
+      role: user.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+
+    // Convert profile image to base64 if exists
+    if (
+      userResponse.profile_image &&
+      fs.existsSync(userResponse.profile_image)
+    ) {
+      try {
+        const imageData = fs.readFileSync(userResponse.profile_image);
+        userResponse.profile_image_base64 = imageData.toString("base64");
+      } catch (imgErr) {
+        userResponse.profile_image_base64 = null;
+      }
+    } else {
+      userResponse.profile_image_base64 = null;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "تم تحديث دور المستخدم بنجاح",
+      user: userResponse,
+    });
+  } catch (err) {
+    console.error("Error changing user role:", err);
+    res.status(500).json({
+      success: false,
+      message: "خطأ في تحديث دور المستخدم",
+      error: err.message,
+    });
+  }
+};
+
+// Update user profile endpoint
+exports.updateUserProfile = [
+  upload.single("profileImage"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, email, phone, address } = req.body;
+
+      // Verify that the user is editing their own profile
+      if (req.user.id !== id) {
+        return res.status(403).json({
+          success: false,
+          message: "لا يمكنك تعديل ملف شخصي آخر",
+        });
+      }
+
+      // Validate required fields
+      if (!name || !phone || !address) {
+        return res.status(400).json({
+          success: false,
+          message: "الاسم ورقم الهاتف والعنوان مطلوبة",
+        });
+      }
+
+      // Validate email format if provided
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: "صيغة البريد الإلكتروني غير صحيحة",
+        });
+      }
+
+      // Find user by ID
+      const user = await User.findByPk(id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "المستخدم غير موجود",
+        });
+      }
+
+      // Check for existing user by email (only if email is provided and different from current)
+      if (email && email !== user.email) {
+        const existingUserByEmail = await User.findOne({
+          where: { email: email },
+        });
+
+        if (existingUserByEmail) {
+          return res.status(409).json({
+            success: false,
+            message: "البريد الإلكتروني مستخدم بالفعل",
+          });
+        }
+      }
+
+      // Check for existing user by phone (only if phone is different from current)
+      if (phone !== user.phone) {
+        const existingUserByPhone = await User.findOne({
+          where: { phone: phone },
+        });
+
+        if (existingUserByPhone) {
+          return res.status(409).json({
+            success: false,
+            message: "رقم الهاتف مستخدم بالفعل",
+          });
+        }
+      }
+
+      // Handle profile image upload
+      let profileImagePath = user.profile_image; // Keep existing image by default
+      if (req.file) {
+        try {
+          // Delete old profile image if exists
+          if (user.profile_image && fs.existsSync(user.profile_image)) {
+            fs.unlinkSync(user.profile_image);
+          }
+
+          const username = name.replace(/[^a-zA-Z0-9]/g, "_") || "profile";
+          const ext = path.extname(req.file.originalname);
+          const timestamp = Date.now();
+          const filename = `${username}_${timestamp}${ext}`;
+          profileImagePath = path.join("uploads", "profiles", filename);
+
+          // Ensure uploads/profiles directory exists
+          const uploadsDir = path.join("uploads", "profiles");
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+
+          // Write file to disk
+          fs.writeFileSync(profileImagePath, req.file.buffer);
+        } catch (fileError) {
+          console.error("File upload error:", fileError);
+          return res.status(500).json({
+            success: false,
+            message: "خطأ في رفع الصورة الشخصية",
+          });
+        }
+      }
+
+      // Update user in database
+      await user.update({
+        name: name.trim(),
+        email: email ? email.trim() : null,
+        phone: phone.trim(),
+        address: address.trim(),
+        profile_image: profileImagePath,
+      });
+
+      // Prepare response user object (exclude password)
+      const userResponse = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        address: user.address,
+        profile_image: user.profile_image,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      };
+
+      // Convert profile image to base64 if exists
+      if (
+        userResponse.profile_image &&
+        fs.existsSync(userResponse.profile_image)
+      ) {
+        try {
+          const imageData = fs.readFileSync(userResponse.profile_image);
+          userResponse.profile_image_base64 = imageData.toString("base64");
+        } catch (imgErr) {
+          userResponse.profile_image_base64 = null;
+        }
+      } else {
+        userResponse.profile_image_base64 = null;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "تم تحديث الملف الشخصي بنجاح",
+        user: userResponse,
+      });
+    } catch (err) {
+      console.error("Error updating user profile:", err);
+      res.status(500).json({
+        success: false,
+        message: "خطأ في تحديث الملف الشخصي",
+        error: err.message,
+      });
+    }
+  },
+];
