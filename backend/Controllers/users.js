@@ -253,6 +253,16 @@ exports.deleteUserById = async (req, res) => {
 exports.getUserById = async (req, res) => {
   try {
     const userId = req.params.id;
+    const requestingUserId = req.user.id; // From verifyToken middleware
+
+    // Check if user is requesting their own profile or is admin
+    if (requestingUserId !== userId && req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "لا يمكنك الوصول إلى ملف شخصي آخر",
+      });
+    }
+
     const user = await User.findByPk(userId, {
       attributes: { exclude: ["password"] }, // Exclude password from response
     });

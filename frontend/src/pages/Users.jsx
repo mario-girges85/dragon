@@ -19,16 +19,37 @@ const UsersTable = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    axios
-      .get(import.meta.env.VITE_ALLUSER)
-      .then((res) => {
-        setUsers(res.data || []);
+    const fetchUsers = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          setError("يرجى تسجيل الدخول للوصول إلى هذه الصفحة");
+          setLoading(false);
+          return;
+        }
+
+        const response = await axios.get(import.meta.env.VITE_ALLUSER, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        setUsers(response.data || []);
         setLoading(false);
-      })
-      .catch(() => {
-        setError("فشل تحميل المستخدمين");
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        if (error.response?.status === 403) {
+          setError("ليس لديك صلاحية للوصول إلى قائمة المستخدمين");
+        } else if (error.response?.status === 401) {
+          setError("يرجى تسجيل الدخول مرة أخرى");
+        } else {
+          setError("فشل تحميل المستخدمين");
+        }
         setLoading(false);
-      });
+      }
+    };
+
+    fetchUsers();
   }, []);
 
   const handleRoleChange = async (userId, newRole, currentRole, userName) => {

@@ -9,11 +9,11 @@ usersRouter.post("/login", usersController.loginUser);
 // Define a route for creating a new user
 usersRouter.post("/new", usersController.newUser);
 
-// Define a route for getting all users
-usersRouter.get("/getall", usersController.getAllUsers);
+// Define a route for getting all users (admin only)
+usersRouter.get("/getall", verifyAdmin, usersController.getAllUsers);
 
-// Define a route for deleting a user by ID
-usersRouter.delete("/delete/:id", usersController.deleteUserById);
+// Define a route for deleting a user by ID (admin only)
+usersRouter.delete("/delete/:id", verifyAdmin, usersController.deleteUserById);
 
 // Define a route for changing user role (must come before /:id route)
 usersRouter.put("/:id/role", verifyAdmin, usersController.changeUserRole);
@@ -25,7 +25,7 @@ usersRouter.put(
   usersController.updateUserProfile
 );
 
-// Define a route for getting a user by ID
-usersRouter.get("/:id", usersController.getUserById);
+// Define a route for getting a user by ID (protected)
+usersRouter.get("/:id", verifyToken, usersController.getUserById);
 
 module.exports = usersRouter;
