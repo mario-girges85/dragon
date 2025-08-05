@@ -113,13 +113,30 @@ const UsersTable = () => {
     }
 
     try {
-      await axios.delete(`${import.meta.env.VITE_DELETEUSER}/${userId}`);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("يرجى تسجيل الدخول مرة أخرى");
+        return;
+      }
+
+      await axios.delete(`${import.meta.env.VITE_DELETEUSER}/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       // Remove the user from local state
       setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId));
+      alert("تم حذف المستخدم بنجاح");
     } catch (error) {
       console.error("Error deleting user:", error);
-      alert("فشل في حذف المستخدم");
+      if (error.response?.status === 403) {
+        alert("ليس لديك صلاحية لحذف المستخدمين");
+      } else if (error.response?.status === 401) {
+        alert("يرجى تسجيل الدخول مرة أخرى");
+      } else {
+        alert("فشل في حذف المستخدم");
+      }
     }
   };
 

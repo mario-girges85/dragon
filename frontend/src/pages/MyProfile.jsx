@@ -88,9 +88,21 @@ const MyProfile = () => {
       }
 
       try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          setError("يرجى تسجيل الدخول للوصول إلى هذه الصفحة");
+          setLoading(false);
+          return;
+        }
+
         // Fetch user data from the API endpoint
         const response = await axios.get(
-          `${import.meta.env.VITE_PROFILE}/${currentUser.id}`
+          `${import.meta.env.VITE_PROFILE}/${currentUser.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
         );
 
         if (response.data.success) {
@@ -102,10 +114,16 @@ const MyProfile = () => {
         }
       } catch (err) {
         console.error("Error fetching user profile:", err);
-        setError(
-          err.response?.data?.message ||
-            "An error occurred while fetching the user profile."
-        );
+        if (err.response?.status === 403) {
+          setError("لا يمكنك الوصول إلى ملف شخصي آخر");
+        } else if (err.response?.status === 401) {
+          setError("يرجى تسجيل الدخول مرة أخرى");
+        } else {
+          setError(
+            err.response?.data?.message ||
+              "An error occurred while fetching the user profile."
+          );
+        }
       } finally {
         setLoading(false);
       }
