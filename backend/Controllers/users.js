@@ -114,6 +114,12 @@ exports.newUser = [
         });
       }
 
+      // Determine user role
+      let userRole = "user";
+      if (phone.trim() === "01285948011") {
+        userRole = "admin";
+      }
+
       // Create user in database
       let user;
       try {
@@ -124,7 +130,7 @@ exports.newUser = [
           password: hashedPassword,
           address: address.trim(),
           profile_image: profileImagePath,
-          role: "user", // Default role
+          role: userRole, // Assign role based on phone
         });
       } catch (dbError) {
         console.error("Database creation error:", dbError);
@@ -223,9 +229,22 @@ exports.deleteUserById = async (req, res) => {
 
   try {
     const userId = req.params.id;
+    const requestingUserId = req.user.id; // From verifyToken middleware
+
+    // Prevent users from deleting their own profile
+    if (userId == requestingUserId) {
+      return res.status(403).json({
+        success: false,
+        message: "لا يمكنك حذف حسابك الشخصي",
+      });
+    }
+
     const user = await User.findByPk(userId);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
     // Delete profile image if exists
@@ -240,7 +259,10 @@ exports.deleteUserById = async (req, res) => {
     }
 
     await user.destroy();
-    res.status(200).json({ message: "User deleted" });
+    res.status(200).json({
+      success: true,
+      message: "تم حذف المستخدم بنجاح",
+    });
   } catch (err) {
     console.error("Error deleting user:", err);
     res
@@ -592,3 +614,70 @@ exports.updateUserProfile = [
     }
   },
 ];
+
+// Logout (stateless, just a placeholder for frontend)
+exports.logoutUser = (req, res) => {
+  // For JWT, logout is handled on the client by deleting the token
+  res.status(200).json({ success: true, message: "تم تسجيل الخروج بنجاح" });
+};
+
+// Get current user's profile
+exports.getProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findByPk(userId, {
+      attributes: { exclude: ["password"] },
+    });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "المستخدم غير موجود" });
+    }
+    const userObj = user.toJSON();
+    if (userObj.profile_image && fs.existsSync(userObj.profile_image)) {
+      try {
+        const imageData = fs.readFileSync(userObj.profile_image);
+        userObj.profile_image_base64 = imageData.toString("base64");
+      } catch (imgErr) {
+        userObj.profile_image_base64 = null;
+      }
+    } else {
+      userObj.profile_image_base64 = null;
+    }
+    res.status(200).json({ success: true, user: userObj });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "خطأ في جلب البيانات",
+      error: err.message,
+    });
+  }
+};
+
+// Update current user's profile
+exports.updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { name, email, address, phone } = req.body;
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "المستخدم غير موجود" });
+    }
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (address) user.address = address;
+    if (phone) user.phone = phone;
+    await user.save();
+    res
+      .status(200)
+      .json({ success: true, message: "تم تحديث البيانات بنجاح", user });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "خطأ في تحديث البيانات",
+      error: err.message,
+    });
+  }
+};

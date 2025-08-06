@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Package,
   User,
@@ -6,9 +7,15 @@ import {
   DollarSign,
   Hash,
   ArrowLeft,
+  Eye,
 } from "lucide-react";
 
 const OrderCard = ({ order }) => {
+  const navigate = useNavigate();
+
+  const handleCardClick = () => {
+    navigate(`/orders/${order.id}`);
+  };
   const getStatusStyles = (status) => {
     switch (status?.toLowerCase()) {
       case "pending":
@@ -34,8 +41,9 @@ const OrderCard = ({ order }) => {
 
   return (
     <div
-      className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 w-full max-w-md mx-auto"
+      className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 w-full max-w-md mx-auto cursor-pointer hover:shadow-xl transition-shadow duration-300 hover:border-[#c19a5b]"
       dir="rtl"
+      onClick={handleCardClick}
     >
       {/* Card Header: Order Number and Status */}
       <div className="flex justify-between items-center pb-4 mb-4 border-b border-gray-200">
@@ -45,13 +53,16 @@ const OrderCard = ({ order }) => {
             {order.orderNumber}
           </span>
         </div>
-        <span
-          className={`px-3 py-1 text-sm font-semibold rounded-full ${getStatusStyles(
-            order.status
-          )}`}
-        >
-          {order.status}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`px-3 py-1 text-sm font-semibold rounded-full ${getStatusStyles(
+              order.status
+            )}`}
+          >
+            {order.status}
+          </span>
+          <Eye className="w-4 h-4 text-[#c19a5b]" />
+        </div>
       </div>
 
       {/* Card Body: Order Details */}

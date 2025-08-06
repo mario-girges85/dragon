@@ -17,8 +17,9 @@ import {
   Edit,
   MessageCircle,
   Download,
+  TestTube,
 } from "lucide-react";
-import { generateOrderPDF } from "../util/pdfGenerator";
+import { generateOrderPDFWithFallback } from "../util/pdfGenerator";
 
 const OrderDetails = () => {
   const { orderId } = useParams();
@@ -41,13 +42,14 @@ const OrderDetails = () => {
           return;
         }
 
-        const apiBase =
-          import.meta.env.VITE_API_BASE || "http://localhost:3000";
-        const response = await axios.get(`${apiBase}/orders/${orderId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_BASE}/orders/${orderId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
         console.log("Response:", response.data);
         if (response.data.success) {
@@ -222,7 +224,7 @@ const OrderDetails = () => {
                   تفاصيل الطلب
                 </h1>
                 <button
-                  onClick={() => generateOrderPDF(order)}
+                  onClick={() => generateOrderPDFWithFallback(order)}
                   className="flex items-center justify-center bg-white text-[#c19a5b] px-3 py-2 sm:px-4 sm:py-2 rounded-lg hover:bg-gray-100 transition-colors font-medium shadow-md w-full sm:w-auto max-w-full sm:max-w-xs"
                 >
                   <Download className="w-5 h-5 ml-2" />

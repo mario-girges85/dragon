@@ -17,6 +17,7 @@ const UsersTable = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -26,6 +27,16 @@ const UsersTable = () => {
           setError("يرجى تسجيل الدخول للوصول إلى هذه الصفحة");
           setLoading(false);
           return;
+        }
+
+        // Get current user from localStorage
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+          try {
+            setCurrentUser(JSON.parse(userStr));
+          } catch (e) {
+            console.error("Error parsing user data:", e);
+          }
         }
 
         const response = await axios.get(import.meta.env.VITE_ALLUSER, {
@@ -131,7 +142,12 @@ const UsersTable = () => {
     } catch (error) {
       console.error("Error deleting user:", error);
       if (error.response?.status === 403) {
-        alert("ليس لديك صلاحية لحذف المستخدمين");
+        // Check if it's the self-deletion error
+        if (error.response?.data?.message?.includes("حسابك الشخصي")) {
+          alert("لا يمكنك حذف حسابك الشخصي");
+        } else {
+          alert("ليس لديك صلاحية لحذف المستخدمين");
+        }
       } else if (error.response?.status === 401) {
         alert("يرجى تسجيل الدخول مرة أخرى");
       } else {
@@ -249,12 +265,18 @@ const UsersTable = () => {
                     </select>
                   </td>
                   <td className="py-4 px-4 text-center">
-                    <button
-                      onClick={() => handleDelete(user.id)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl font-bold shadow-lg transition-colors"
-                    >
-                      حذف
-                    </button>
+                    {currentUser && currentUser.id === user.id ? (
+                      <span className="text-gray-400 text-sm font-medium">
+                        لا يمكن حذف حسابك
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleDelete(user.id)}
+                        className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl font-bold shadow-lg transition-colors"
+                      >
+                        حذف
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

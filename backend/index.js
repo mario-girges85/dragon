@@ -30,7 +30,9 @@ const port = process.env.PORT || 3000;
 // --- Core Middleware ---
 app.use(
   cors({
-    origin: "http://localhost:5173", // Your frontend URL
+    origin: process.env.NODE_ENV === "production" 
+      ? ["https://your-frontend-domain.vercel.app", "http://localhost:5173"]
+      : "http://localhost:5173",
     credentials: true,
   })
 );
@@ -39,6 +41,24 @@ app.use(express.urlencoded({ extended: true })); // for parsing application/x-ww
 
 // NEW: Serve uploaded files statically
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.status(200).json({ 
+    status: "OK", 
+    message: "Server is running",
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Root endpoint
+app.get("/", (req, res) => {
+  res.json({ 
+    message: "Shipping Management API",
+    version: "1.0.0",
+    status: "running"
+  });
+});
 
 // --- API Routes ---
 app.use("/users", usersRouter);

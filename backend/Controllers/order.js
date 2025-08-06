@@ -192,14 +192,71 @@ exports.getOrdersByUserId = async (req, res) => {
 // Get a single order by ID
 exports.getOrderById = async (req, res) => {
   try {
-    const order = await Order.findByPk(req.params.id);
+    const orderId = req.params.id;
+    const requestingUserId = req.user.id; // From verifyToken middleware
+
+    const order = await Order.findByPk(orderId, {
+      include: [
+        {
+          model: User,
+          attributes: ["name", "profile_image", "email", "phone"],
+        },
+      ],
+    });
+
     if (!order) {
       return res
         .status(404)
         .json({ success: false, message: "Order not found." });
     }
-    res.status(200).json({ success: true, order });
+
+    // Check if user is requesting their own order or is admin
+    if (order.userId !== requestingUserId && req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "لا يمكنك الوصول إلى طلب آخر",
+      });
+    }
+
+    const orderObj = order.toJSON();
+
+    // Convert user profile image to base64
+    if (
+      orderObj.User &&
+      orderObj.User.profile_image &&
+      fs.existsSync(orderObj.User.profile_image)
+    ) {
+      try {
+        const imageData = fs.readFileSync(orderObj.User.profile_image);
+        orderObj.User.profile_image_base64 = `data:image/jpeg;base64,${imageData.toString(
+          "base64"
+        )}`;
+      } catch (imgErr) {
+        console.error("Error reading profile image:", imgErr);
+        orderObj.User.profile_image_base64 = null;
+      }
+    } else {
+      orderObj.User.profile_image_base64 = null;
+    }
+
+    // Convert package image to base64 if it exists
+    if (orderObj.packageImageUrl && fs.existsSync(orderObj.packageImageUrl)) {
+      try {
+        const packageImageData = fs.readFileSync(orderObj.packageImageUrl);
+        orderObj.packageImage = `data:image/jpeg;base64,${packageImageData.toString(
+          "base64"
+        )}`;
+      } catch (imgErr) {
+        console.error("Error reading package image:", imgErr);
+        orderObj.packageImage = null;
+      }
+    } else {
+      orderObj.packageImage = null;
+    }
+
+    res.status(200).json({ success: true, order: orderObj });
   } catch (error) {
+    console.error("Error fetching order by ID:", error);
     res.status(500).json({ success: false, message: "Failed to fetch order." });
   }
 };

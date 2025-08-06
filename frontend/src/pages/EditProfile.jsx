@@ -217,7 +217,7 @@ const EditProfile = () => {
                 تسجيل الدخول
               </button>
               <button
-                onClick={() => navigate("/myprofile")}
+                onClick={() => navigate("/profile")}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
                 العودة للملف الشخصي
@@ -235,7 +235,7 @@ const EditProfile = () => {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => navigate("/myprofile")}
+            onClick={() => navigate("/profile")}
             className="flex items-center text-white hover:text-[#f5d5a8] mb-4 transition-colors"
           >
             <ArrowLeft className="w-5 h-5 ml-2" />

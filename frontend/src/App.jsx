@@ -9,6 +9,7 @@ import OrdersPage from "./pages/OrdersPage";
 import Profile from "./pages/Profile";
 import MyProfile from "./pages/MyProfile";
 import EditProfile from "./pages/EditProfile";
+import OrderDetails from "./pages/OrderDetails";
 import ProtectedRoute from "./components/ProtectedRoute";
 const App = () => {
   // console.log(import.meta.env.VITE_NEWUSER); // Log the environment variable for debugging
@@ -64,6 +65,14 @@ const App = () => {
           element={
             <ProtectedRoute>
               <OrdersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/orders/:orderId"
+          element={
+            <ProtectedRoute>
+              <OrderDetails />
             </ProtectedRoute>
           }
         />
