@@ -373,7 +373,7 @@ exports.loginUser = async (req, res) => {
 
     // Generate JWT (optional)
     const token = jwt.sign(
-      { id: userObj.id, email: userObj.email },
+      { id: userObj.id, email: userObj.email, role: userObj.role },
       JWT_SECRET
     );
 
@@ -677,6 +677,47 @@ exports.updateProfile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "خطأ في تحديث البيانات",
+      error: err.message,
+    });
+  }
+};
+
+// Get all delivery users
+exports.getDeliveryUsers = async (req, res) => {
+  try {
+    const deliveryUsers = await User.findAll({
+      where: { role: "delivery" },
+      attributes: { exclude: ["password"] },
+      order: [["name", "ASC"]],
+    });
+
+    // Convert profile images to base64
+    const deliveryUsersWithImages = deliveryUsers.map((user) => {
+      const userObj = user.toJSON();
+      if (userObj.profile_image && fs.existsSync(userObj.profile_image)) {
+        try {
+          const imageData = fs.readFileSync(userObj.profile_image);
+          userObj.profile_image_base64 = `data:image/jpeg;base64,${imageData.toString(
+            "base64"
+          )}`;
+        } catch (imgErr) {
+          userObj.profile_image_base64 = null;
+        }
+      } else {
+        userObj.profile_image_base64 = null;
+      }
+      return userObj;
+    });
+
+    res.status(200).json({
+      success: true,
+      deliveryUsers: deliveryUsersWithImages,
+    });
+  } catch (err) {
+    console.error("Error fetching delivery users:", err);
+    res.status(500).json({
+      success: false,
+      message: "خطأ في جلب مندوبي التوصيل",
       error: err.message,
     });
   }

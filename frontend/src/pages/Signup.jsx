@@ -468,7 +468,7 @@ const Signup = () => (
                 <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
                   {icon}
                 </div>
-                <span className="text-sm">{text}</span>
+                <span className="text-sm m-2">{text}</span>
               </div>
             ))}
           </div>

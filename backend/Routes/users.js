@@ -23,6 +23,9 @@ usersRouter.put("/update-profile", verifyToken, usersController.updateProfile);
 // Define a route for getting all users (admin only)
 usersRouter.get("/getall", verifyAdmin, usersController.getAllUsers);
 
+// Define a route for getting all delivery users (admin only)
+usersRouter.get("/delivery", verifyAdmin, usersController.getDeliveryUsers);
+
 // Define a route for deleting a user by ID (admin only)
 usersRouter.delete("/delete/:id", verifyAdmin, usersController.deleteUserById);
 

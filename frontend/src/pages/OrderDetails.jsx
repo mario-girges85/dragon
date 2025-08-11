@@ -18,6 +18,7 @@ import {
   MessageCircle,
   Download,
   TestTube,
+  Truck,
 } from "lucide-react";
 import { generateOrderPDFWithFallback } from "../util/pdfGenerator";
 
@@ -463,6 +464,72 @@ const OrderDetails = () => {
               </div>
             </div>
 
+            {/* Delivery User Info */}
+            {order.DeliveryUser && (
+              <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                  <Truck className="w-5 h-5 text-blue-600 ml-2" />
+                  مندوب التوصيل
+                </h3>
+                <div className="flex items-center">
+                  {order.DeliveryUser?.profile_image_base64 ? (
+                    <img
+                      src={
+                        order.DeliveryUser.profile_image_base64.startsWith(
+                          "data:"
+                        )
+                          ? order.DeliveryUser.profile_image_base64
+                          : order.DeliveryUser.profile_image_base64.startsWith(
+                              "http"
+                            )
+                          ? order.DeliveryUser.profile_image_base64
+                          : `data:image/jpeg;base64,${order.DeliveryUser.profile_image_base64}`
+                      }
+                      alt={order.DeliveryUser.name}
+                      className="w-16 h-16 rounded-full object-cover border-2 border-blue-200"
+                      onError={(e) => {
+                        e.target.src = "/avatar.png";
+                      }}
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center border-2 border-blue-300">
+                      <Truck className="w-8 h-8 text-blue-500" />
+                    </div>
+                  )}
+                  <div className="mr-4 flex-1">
+                    <p className="font-semibold text-gray-800 text-lg">
+                      {order.DeliveryUser.name || "مندوب غير معروف"}
+                    </p>
+                    {order.DeliveryUser?.email && (
+                      <div className="flex items-center mt-1 text-gray-600">
+                        <Mail className="w-4 h-4 ml-1" />
+                        <span className="text-sm">
+                          {order.DeliveryUser.email}
+                        </span>
+                      </div>
+                    )}
+                    {order.DeliveryUser?.phone && (
+                      <div className="flex items-center justify-between mt-1">
+                        <div className="flex items-center text-gray-600">
+                          <Phone className="w-4 h-4 ml-1" />
+                          <span className="text-sm">
+                            {order.DeliveryUser.phone}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => openWhatsApp(order.DeliveryUser.phone)}
+                          className="flex items-center bg-green-500 text-white px-2 py-1 rounded-lg text-xs hover:bg-green-600 transition-colors"
+                        >
+                          <MessageCircle className="w-3 h-3 ml-1" />
+                          واتساب
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Order Image */}
             {order.packageImage && (
               <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
@@ -492,6 +559,19 @@ const OrderDetails = () => {
                   >
                     <Package className="w-12 h-12 text-gray-400" />
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Delivery Notes */}
+            {order.deliveryNotes && (
+              <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                  <MessageCircle className="w-5 h-5 text-red-600 ml-2" />
+                  ملاحظات التوصيل
+                </h3>
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                  <p className="text-red-800">{order.deliveryNotes}</p>
                 </div>
               </div>
             )}

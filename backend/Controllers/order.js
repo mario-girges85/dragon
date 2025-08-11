@@ -61,7 +61,7 @@ exports.newOrder = [
         receiverPhone,
         address,
         packageType,
-        weight: parseFloat(weight),
+        weight: weight ? parseFloat(weight) : null,
         notes: notes || null,
         isCollection: isCollection === "true",
         collectionPrice:
@@ -99,19 +99,35 @@ exports.newOrder = [
 // Get all orders
 exports.getAllOrders = async (req, res) => {
   try {
+    let whereClause = {};
+
+    // If user is delivery, only show orders assigned to them
+    if (req.user.role === "delivery") {
+      whereClause.deliveryUserId = req.user.id;
+    }
+
     const orders = await Order.findAll({
+      where: whereClause,
       order: [["createdAt", "DESC"]],
       include: [
         {
           model: User, // This will now correctly attach the data as a "User" property
+          as: "User",
+          attributes: ["name", "profile_image"],
+        },
+        {
+          model: User,
+          as: "DeliveryUser",
           attributes: ["name", "profile_image"],
         },
       ],
     });
 
-    // Convert profile images to base64 for each order's user
+    // Convert profile images to base64 for each order's user and delivery user
     const ordersWithUserImages = orders.map((order) => {
       const orderObj = order.toJSON();
+
+      // Handle creator user image
       if (
         orderObj.User &&
         orderObj.User.profile_image &&
@@ -129,6 +145,28 @@ exports.getAllOrders = async (req, res) => {
       } else {
         orderObj.User.profile_image_base64 = null;
       }
+
+      // Handle delivery user image
+      if (
+        orderObj.DeliveryUser &&
+        orderObj.DeliveryUser.profile_image &&
+        fs.existsSync(orderObj.DeliveryUser.profile_image)
+      ) {
+        try {
+          const imageData = fs.readFileSync(
+            orderObj.DeliveryUser.profile_image
+          );
+          orderObj.DeliveryUser.profile_image_base64 = `data:image/jpeg;base64,${imageData.toString(
+            "base64"
+          )}`;
+        } catch (imgErr) {
+          console.error("Error reading delivery user profile image:", imgErr);
+          orderObj.DeliveryUser.profile_image_base64 = null;
+        }
+      } else if (orderObj.DeliveryUser) {
+        orderObj.DeliveryUser.profile_image_base64 = null;
+      }
+
       return orderObj;
     });
 
@@ -145,6 +183,15 @@ exports.getAllOrders = async (req, res) => {
 exports.getOrdersByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
+    const requestingUserId = req.user.id; // From verifyToken middleware
+
+    // Check if user is requesting their own orders or is admin
+    if (requestingUserId !== userId && req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "لا يمكنك الوصول إلى طلبات مستخدم آخر",
+      });
+    }
 
     const orders = await Order.findAll({
       where: { userId: userId },
@@ -199,6 +246,12 @@ exports.getOrderById = async (req, res) => {
       include: [
         {
           model: User,
+          as: "User",
+          attributes: ["name", "profile_image", "email", "phone"],
+        },
+        {
+          model: User,
+          as: "DeliveryUser",
           attributes: ["name", "profile_image", "email", "phone"],
         },
       ],
@@ -237,6 +290,25 @@ exports.getOrderById = async (req, res) => {
       }
     } else {
       orderObj.User.profile_image_base64 = null;
+    }
+
+    // Convert delivery user profile image to base64
+    if (
+      orderObj.DeliveryUser &&
+      orderObj.DeliveryUser.profile_image &&
+      fs.existsSync(orderObj.DeliveryUser.profile_image)
+    ) {
+      try {
+        const imageData = fs.readFileSync(orderObj.DeliveryUser.profile_image);
+        orderObj.DeliveryUser.profile_image_base64 = `data:image/jpeg;base64,${imageData.toString(
+          "base64"
+        )}`;
+      } catch (imgErr) {
+        console.error("Error reading delivery user profile image:", imgErr);
+        orderObj.DeliveryUser.profile_image_base64 = null;
+      }
+    } else if (orderObj.DeliveryUser) {
+      orderObj.DeliveryUser.profile_image_base64 = null;
     }
 
     // Convert package image to base64 if it exists
@@ -285,5 +357,188 @@ exports.updateOrderStatus = async (req, res) => {
     res
       .status(500)
       .json({ success: false, message: "Failed to update order status." });
+  }
+};
+
+// Update delivery status by delivery personnel
+exports.updateDeliveryStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, deliveryNotes } = req.body;
+
+    // Check if user is delivery personnel
+    if (req.user.role !== "delivery") {
+      return res.status(403).json({
+        success: false,
+        message: "Only delivery personnel can update delivery status.",
+      });
+    }
+
+    // Find the order
+    const order = await Order.findByPk(id);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Check if the order is assigned to this delivery user
+    if (order.deliveryUserId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only update orders assigned to you.",
+      });
+    }
+
+    // Validate status
+    const validStatuses = ["delivered", "returned"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Only 'delivered' or 'returned' are allowed.",
+      });
+    }
+
+    // If status is returned, delivery notes are required
+    if (
+      status === "returned" &&
+      (!deliveryNotes || deliveryNotes.trim() === "")
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Delivery notes are required when marking order as not delivered.",
+      });
+    }
+
+    // Update the order
+    order.status = status;
+    if (deliveryNotes) {
+      order.deliveryNotes = deliveryNotes.trim();
+    }
+    await order.save();
+
+    // Get the updated order with user information
+    const updatedOrder = await Order.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: "User",
+          attributes: ["name", "profile_image"],
+        },
+        {
+          model: User,
+          as: "DeliveryUser",
+          attributes: ["name", "profile_image"],
+        },
+      ],
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Order status updated to ${status}`,
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.error("Error updating delivery status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update delivery status.",
+    });
+  }
+};
+
+// Assign order to delivery personnel
+exports.assignOrderToDelivery = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { deliveryUserId } = req.body;
+
+    // Check if user is admin
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only administrators can assign orders to delivery personnel.",
+      });
+    }
+
+    // Find the order
+    const order = await Order.findByPk(id);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Verify the delivery user exists and has delivery role
+    const deliveryUser = await User.findByPk(deliveryUserId);
+    if (!deliveryUser) {
+      return res.status(404).json({
+        success: false,
+        message: "Delivery user not found",
+      });
+    }
+
+    if (deliveryUser.role !== "delivery") {
+      return res.status(400).json({
+        success: false,
+        message: "Selected user is not a delivery personnel",
+      });
+    }
+
+    // Determine the next status based on current status
+    let nextStatus = order.status;
+    switch (order.status) {
+      case "pending":
+        nextStatus = "confirmed";
+        break;
+      case "confirmed":
+        nextStatus = "picked_up";
+        break;
+      case "picked_up":
+        nextStatus = "in_transit";
+        break;
+      case "in_transit":
+        nextStatus = "delivered";
+        break;
+      default:
+        // For delivered, cancelled, or returned orders, don't change status
+        break;
+    }
+
+    // Update the order with delivery assignment and status
+    order.deliveryUserId = deliveryUserId;
+    order.status = nextStatus;
+    await order.save();
+
+    // Get the updated order with user information
+    const updatedOrder = await Order.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: "User",
+          attributes: ["name", "profile_image"],
+        },
+        {
+          model: User,
+          as: "DeliveryUser",
+          attributes: ["name", "profile_image"],
+        },
+      ],
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Order assigned to delivery personnel and status updated to ${nextStatus}`,
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.error("Error assigning order to delivery:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to assign order to delivery personnel.",
+    });
   }
 };

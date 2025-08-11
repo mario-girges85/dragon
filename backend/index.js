@@ -14,10 +14,15 @@ const User = require("./models/user");
 const Order = require("./models/order");
 
 // --- NEW: Define model associations ---
-// This tells Sequelize a User can have many Orders
-User.hasMany(Order, { foreignKey: "userId" });
-// This tells Sequelize an Order belongs to one User
-Order.belongsTo(User, { foreignKey: "userId" });
+// This tells Sequelize a User can have many Orders (as creator)
+User.hasMany(Order, { foreignKey: "userId", as: "User" });
+// This tells Sequelize an Order belongs to one User (creator)
+Order.belongsTo(User, { foreignKey: "userId", as: "User" });
+
+// This tells Sequelize a User can have many Orders (as delivery person)
+User.hasMany(Order, { foreignKey: "deliveryUserId", as: "DeliveryUser" });
+// This tells Sequelize an Order belongs to one User (delivery person)
+Order.belongsTo(User, { foreignKey: "deliveryUserId", as: "DeliveryUser" });
 // ------------------------------------
 // --- Routes ---
 

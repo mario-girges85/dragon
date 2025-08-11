@@ -101,7 +101,10 @@ const Navbar = () => {
           ...(user.role === "admin"
             ? [{ href: "/users", label: "المستخدمين" }]
             : []),
-          { href: "/createorder", label: "إنشاء طلب" },
+          // Only show create order for non-delivery users
+          ...(user.role !== "delivery"
+            ? [{ href: "/createorder", label: "إنشاء طلب" }]
+            : []),
         ]
       : []),
     { href: "#", label: "اتصل بنا" },
@@ -215,7 +218,7 @@ const Navbar = () => {
                           scrolled ? "text-gray-500" : "text-white/70"
                         }`}
                       >
-                        متصل
+                        {user.role}
                       </div>
                     </div>
                     <ChevronDown
@@ -358,7 +361,7 @@ const Navbar = () => {
                       className="w-10 h-10 rounded-full object-cover cursor-pointer hover:scale-110 transition-transform"
                       onClick={() => {
                         setIsMenuOpen(false);
-                        navigate(`/users/${user.id}`);
+                        navigate("/profile");
                       }}
                     />
                     <div>
@@ -372,7 +375,7 @@ const Navbar = () => {
                   <button
                     onClick={() => {
                       setIsMenuOpen(false);
-                      navigate(`/users/${user.id}`);
+                      navigate("/profile");
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 text-right rounded-lg hover:bg-gray-50 transition-colors"
                   >

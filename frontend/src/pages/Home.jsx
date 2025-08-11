@@ -69,10 +69,21 @@ const HeroContent = ({ user, navigate }) => (
       تزيد عن 15 عاماً في مجال الشحن والتوصيل.
     </p>
     <button
-      onClick={() => (user ? navigate("/createorder") : navigate("/signup"))}
+      onClick={() => {
+        if (user) {
+          if (user.role === "delivery") {
+            alert("مندوبي التوصيل لا يمكنهم إنشاء طلبات. يمكنهم فقط عرض الطلبات المخصصة لهم.");
+            navigate("/orders");
+          } else {
+            navigate("/createorder");
+          }
+        } else {
+          navigate("/signup");
+        }
+      }}
       className="bg-[#8b6914] hover:bg-[#6b5010] text-white px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
     >
-      {user ? "إنشاء طلب" : "إنشاء حساب"}
+      {user ? (user.role === "delivery" ? "عرض الطلبات" : "إنشاء طلب") : "إنشاء حساب"}
     </button>
   </div>
 );

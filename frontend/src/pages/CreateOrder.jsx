@@ -48,14 +48,12 @@ const CreateOrder = () => {
       newErrors.receiverPhone = "رقم هاتف المستلم مطلوب";
     if (!form.address.trim()) newErrors.address = "العنوان مطلوب";
     if (!form.packageType.trim()) newErrors.packageType = "نوع الطرد مطلوب";
-    if (!form.weight.trim()) newErrors.weight = "وزن الطرد مطلوب";
-    if (form.isCollection && !form.collectionPrice.trim())
-      newErrors.collectionPrice = "سعر التحصيل مطلوب";
-
-    // Validate weight is a number
-    if (form.weight && isNaN(parseFloat(form.weight))) {
+    // Weight is now optional, but if provided, must be a valid number
+    if (form.weight && form.weight.trim() && isNaN(parseFloat(form.weight))) {
       newErrors.weight = "وزن الطرد يجب أن يكون رقم";
     }
+    if (form.isCollection && !form.collectionPrice.trim())
+      newErrors.collectionPrice = "سعر التحصيل مطلوب";
 
     // Validate collection price is a number if collection is enabled
     if (
@@ -326,7 +324,8 @@ const CreateOrder = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                وزن الطرد (كغ)<span className="text-red-500 mr-1">*</span>
+                وزن الطرد (كغ){" "}
+                <span className="text-gray-400 text-xs">(اختياري)</span>
               </label>
               <input
                 type="number"
@@ -338,7 +337,7 @@ const CreateOrder = () => {
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#8b6914] focus:border-[#8b6914] transition-all ${
                   errors.weight ? "border-red-500" : "border-gray-300"
                 }`}
-                placeholder="وزن الطرد بالكيلوغرام"
+                placeholder="وزن الطرد بالكيلوغرام (اختياري)"
               />
               {errors.weight && (
                 <p className="text-red-500 text-sm mt-1">{errors.weight}</p>

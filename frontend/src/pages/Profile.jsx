@@ -73,7 +73,7 @@ const Profile = () => {
 
         // Fetch user data from the API endpoint
         const response = await axios.get(
-          `${import.meta.env.VITE_PROFILE}/${id}`,
+          `${import.meta.env.VITE_USERS_BASE}/${id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -298,17 +298,24 @@ const Profile = () => {
                 {orders.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
                     {orders.map((order) => (
-                      <OrderCard key={order.id} order={order} />
+                      <OrderCard
+                        key={order.id}
+                        order={order}
+                        isAdmin={false}
+                        deliveryUsers={[]}
+                        onAssignDelivery={() => {}}
+                        onDeliveryStatusUpdate={() => {}}
+                      />
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-8 sm:py-12">
                     <Package className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
                     <h3 className="text-base sm:text-lg font-semibold text-gray-600 mb-1 sm:mb-2">
-                      لا توجد طلبات
+                      لا توجد أي طلبات
                     </h3>
                     <p className="text-sm sm:text-base text-gray-500 px-2">
-                      لم يتم إنشاء أي طلبات حتى الآن.
+                      هذا المستخدم لم ينشئ أي طلبات حتى الآن.
                     </p>
                   </div>
                 )}

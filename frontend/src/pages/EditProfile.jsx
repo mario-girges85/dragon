@@ -57,14 +57,11 @@ const EditProfile = () => {
         }
 
         // Fetch user data from the API endpoint
-        const response = await axios.get(
-          `${import.meta.env.VITE_PROFILE}/${currentUser.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const response = await axios.get(import.meta.env.VITE_PROFILE, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
         if (response.data.success) {
           const userData = response.data.user;

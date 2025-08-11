@@ -55,7 +55,7 @@ const App = () => {
         <Route
           path="/createorder"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute excludeDelivery={true}>
               <CreateOrder />
             </ProtectedRoute>
           }

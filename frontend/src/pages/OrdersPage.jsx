@@ -23,6 +23,10 @@ const OrdersPage = () => {
   // State for status tabs
   const [activeTab, setActiveTab] = useState("all");
 
+  // State for delivery users (admin only)
+  const [deliveryUsers, setDeliveryUsers] = useState([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+
   useEffect(() => {
     const fetchOrders = async () => {
       // Get the authentication token and user info from localStorage
@@ -43,18 +47,20 @@ const OrdersPage = () => {
 
       try {
         const user = JSON.parse(userStr);
+        setIsAdmin(user.role === "admin");
+
         let response;
 
         // Check user role and fetch orders accordingly
-        if (user.role === "admin") {
-          // Admin can see all orders
+        if (user.role === "admin" || user.role === "delivery") {
+          // Admin can see all orders, delivery users see orders assigned to them
           response = await axios.get(import.meta.env.VITE_ALLORDERS, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           });
         } else {
-          // User and delivery can only see their own orders
+          // Regular users can only see orders they created
           response = await axios.get(
             `${import.meta.env.VITE_ORDERS_BY_USERID}${user.id}`,
             {
@@ -85,6 +91,92 @@ const OrdersPage = () => {
     fetchOrders();
   }, []); // The empty dependency array [] ensures this effect runs only once when the component mounts
 
+  // Fetch delivery users for admin
+  useEffect(() => {
+    const fetchDeliveryUsers = async () => {
+      if (!isAdmin) return;
+
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        console.log(
+          "Fetching delivery users from:",
+          import.meta.env.VITE_DELIVERY_USERS
+        );
+        console.log("Token:", token);
+        const response = await axios.get(import.meta.env.VITE_DELIVERY_USERS, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        console.log("Delivery users response:", response.data);
+        if (response.data.success) {
+          setDeliveryUsers(response.data.deliveryUsers);
+          console.log("Set delivery users:", response.data.deliveryUsers);
+          console.log(
+            "Number of delivery users:",
+            response.data.deliveryUsers?.length
+          );
+        } else {
+          console.log("Response was not successful:", response.data);
+        }
+      } catch (err) {
+        console.error("Error fetching delivery users:", err);
+        console.error("Error response:", err.response?.data);
+        console.error("Error status:", err.response?.status);
+      }
+    };
+
+    fetchDeliveryUsers();
+  }, [isAdmin]);
+
+  // Handle delivery assignment
+  const handleAssignDelivery = async (orderId, deliveryUserId) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("يرجى تسجيل الدخول مرة أخرى");
+      return;
+    }
+
+    try {
+      const response = await axios.put(
+        `${import.meta.env.VITE_ASSIGN_DELIVERY}${orderId}/assign-delivery`,
+        { deliveryUserId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Update the order in the local state
+        setOrders((prevOrders) =>
+          prevOrders.map((order) =>
+            order.id === orderId ? { ...order, ...response.data.order } : order
+          )
+        );
+        alert("تم تعيين مندوب التوصيل بنجاح");
+      } else {
+        alert(response.data.message || "فشل في تعيين مندوب التوصيل");
+      }
+    } catch (err) {
+      console.error("Error assigning delivery:", err);
+      alert(err.response?.data?.message || "حدث خطأ أثناء تعيين مندوب التوصيل");
+    }
+  };
+
+  // Handle delivery status update
+  const handleDeliveryStatusUpdate = (updatedOrder) => {
+    setOrders((prevOrders) =>
+      prevOrders.map((order) =>
+        order.id === updatedOrder.id ? { ...order, ...updatedOrder } : order
+      )
+    );
+  };
+
   // Status tabs configuration
   const statusTabs = [
     { id: "all", label: "جميع الطلبات", count: orders.length },
@@ -93,6 +185,13 @@ const OrdersPage = () => {
       label: "في الانتظار",
       count: orders.filter((order) => order.status?.toLowerCase() === "pending")
         .length,
+    },
+    {
+      id: "confirmed",
+      label: "مؤكد",
+      count: orders.filter(
+        (order) => order.status?.toLowerCase() === "confirmed"
+      ).length,
     },
     {
       id: "picked_up",
@@ -258,6 +357,8 @@ const OrdersPage = () => {
                 const user = JSON.parse(userStr);
                 if (user.role === "admin") {
                   return "إدارة وتتبع جميع طلبات الشحن في النظام";
+                } else if (user.role === "delivery") {
+                  return "إدارة وتتبع الطلبات المخصصة لك للتوصيل";
                 } else {
                   return "إدارة وتتبع طلبات الشحن الخاصة بك";
                 }
@@ -400,7 +501,14 @@ const OrdersPage = () => {
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
                   {currentOrders.map((order) => (
-                    <OrderCard key={order.id} order={order} />
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      onAssignDelivery={handleAssignDelivery}
+                      deliveryUsers={deliveryUsers}
+                      isAdmin={isAdmin}
+                      onDeliveryStatusUpdate={handleDeliveryStatusUpdate}
+                    />
                   ))}
                 </div>
 
@@ -501,6 +609,8 @@ const OrdersPage = () => {
                   const user = JSON.parse(userStr);
                   if (user.role === "admin") {
                     return "لا توجد أي طلبات في النظام حتى الآن";
+                  } else if (user.role === "delivery") {
+                    return "لا توجد أي طلبات مخصصة لك حتى الآن";
                   }
                 }
                 return "لا يوجد لديك أي طلبات حتى الآن";
@@ -513,6 +623,8 @@ const OrdersPage = () => {
                   const user = JSON.parse(userStr);
                   if (user.role === "admin") {
                     return "عندما يقوم المستخدمون بإنشاء طلبات جديدة، ستظهر هنا";
+                  } else if (user.role === "delivery") {
+                    return "عندما يتم تخصيص طلبات لك، ستظهر هنا";
                   }
                 }
                 return "عندما تقوم بإنشاء طلب جديد، سيظهر هنا";
@@ -522,7 +634,7 @@ const OrdersPage = () => {
               const userStr = localStorage.getItem("user");
               if (userStr) {
                 const user = JSON.parse(userStr);
-                if (user.role !== "admin") {
+                if (user.role !== "admin" && user.role !== "delivery") {
                   return (
                     <button
                       onClick={() => (window.location.href = "/createorder")}

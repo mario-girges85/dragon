@@ -96,14 +96,11 @@ const MyProfile = () => {
         }
 
         // Fetch user data from the API endpoint
-        const response = await axios.get(
-          `${import.meta.env.VITE_PROFILE}/${currentUser.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const response = await axios.get(import.meta.env.VITE_PROFILE, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
         if (response.data.success) {
           setUser(response.data.user);
@@ -304,14 +301,23 @@ const MyProfile = () => {
             <div className="text-center py-12">
               <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <div className="text-gray-500 text-lg font-medium mb-2">
-                لا توجد طلبات
+                لا توجد أي طلبات
               </div>
-              <div className="text-gray-400">لم تقم بإنشاء أي طلبات بعد</div>
+              <div className="text-gray-400">
+                لم تقم بإنشاء أي طلبات حتى الآن
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
               {orders.map((order) => (
-                <OrderCard key={order.id} order={order} />
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  isAdmin={false}
+                  deliveryUsers={[]}
+                  onAssignDelivery={() => {}}
+                  onDeliveryStatusUpdate={() => {}}
+                />
               ))}
             </div>
           )}

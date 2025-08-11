@@ -50,7 +50,7 @@ const Order = sequelize.define(
     },
     weight: {
       type: DataTypes.DECIMAL(8, 2),
-      allowNull: false,
+      allowNull: true,
     },
     notes: {
       type: DataTypes.TEXT,
@@ -89,8 +89,17 @@ const Order = sequelize.define(
     userId: {
       // This links the order to the user who created it
       type: DataTypes.UUID,
-
       allowNull: false, // An order should always have a user
+    },
+    deliveryUserId: {
+      // This links the order to the delivery person assigned to it
+      type: DataTypes.UUID,
+      allowNull: true, // Can be null if not assigned yet
+    },
+    deliveryNotes: {
+      // Notes from delivery person (e.g., reason for failed delivery)
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
   },
   {

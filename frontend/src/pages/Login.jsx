@@ -120,7 +120,7 @@ const LoginForm = () => {
       <div className="text-center mb-8">
         <div className="flex items-center justify-center mb-4">
           <Package className="w-8 h-8 text-[#8b6914] ml-2" />
-          <h1 className="text-2xl font-bold text-[#8b6914]">شحن الآن</h1>
+          <h1 className="text-2xl font-bold text-[#8b6914]">دراجون</h1>
         </div>
         <h2 className="text-xl font-semibold text-gray-800 mb-2">
           {user ? "مرحباً، " + (user.name || "المستخدم") : "تسجيل الدخول"}
@@ -308,7 +308,7 @@ const Login = () => (
                 <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
                   {icon}
                 </div>
-                <span className="text-sm">{text}</span>
+                <span className="text-sm m-2.5">{text}</span>
               </div>
             ))}
           </div>
