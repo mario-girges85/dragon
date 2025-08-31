@@ -139,63 +139,63 @@ export const generateSimplePDF = (order) => {
           }
           body {
             font-family: 'Cairo', 'Noto Naskh Arabic', 'Amiri', 'Arial', sans-serif;
-            margin: 10px;
+            margin: 5px;
             direction: rtl;
             text-align: right;
             color: #333;
-            line-height: 1.3;
-            font-size: 11px;
+            line-height: 1.2;
+            font-size: 9px;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-            max-width: 148mm; /* A5 width */
-            margin: 10px auto;
+            width: 100%;
+            max-width: none;
           }
           .header {
             background: #c19a5b;
             color: white;
-            padding: 10px;
+            padding: 6px;
             text-align: center;
-            margin: -10px -10px 15px -10px;
+            margin: -5px -5px 10px -5px;
             border-radius: 0;
           }
           .header h1 {
             margin: 0;
-            font-size: 18px;
+            font-size: 14px;
             font-weight: bold;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
           }
           .header p {
-            margin: 5px 0 0 0;
-            font-size: 10px;
+            margin: 3px 0 0 0;
+            font-size: 8px;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
           }
           .order-info {
             border-bottom: 2px solid #c19a5b;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
           }
           .order-info h2 {
             color: #c19a5b;
-            margin-bottom: 5px;
-            font-size: 16px;
+            margin-bottom: 3px;
+            font-size: 12px;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
             font-weight: bold;
           }
           .order-info p {
-            margin: 2px 0;
-            font-size: 11px;
+            margin: 1px 0;
+            font-size: 8px;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
           }
           .section {
-            margin-bottom: 15px;
+            margin-bottom: 8px;
             page-break-inside: avoid;
           }
           .section h3 {
             background: #f5f5f5;
-            padding: 6px 8px;
-            margin: 0 0 8px 0;
+            padding: 4px 6px;
+            margin: 0 0 5px 0;
             color: #333;
-            font-size: 13px;
+            font-size: 10px;
             border-right: 2px solid #c19a5b;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
             font-weight: bold;
@@ -203,60 +203,74 @@ export const generateSimplePDF = (order) => {
           .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 10px;
+            gap: 6px;
+            margin-bottom: 6px;
           }
           .info-box {
             border: 1px solid #ddd;
-            padding: 8px;
-            border-radius: 4px;
+            padding: 5px;
+            border-radius: 3px;
             background: #fafafa;
           }
           .info-box h4 {
             color: #c19a5b;
-            margin: 0 0 5px 0;
-            font-size: 11px;
+            margin: 0 0 3px 0;
+            font-size: 9px;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
             font-weight: bold;
           }
           .info-box p {
-            margin: 2px 0;
-            font-size: 10px;
+            margin: 1px 0;
+            font-size: 8px;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
           }
           .collection-box {
             border: 2px solid #22c55e;
             background: #f0fdf4;
-            padding: 10px;
-            border-radius: 4px;
+            padding: 6px;
+            border-radius: 3px;
             text-align: center;
             color: #22c55e;
-            font-size: 12px;
+            font-size: 9px;
             font-weight: bold;
-            margin: 8px 0;
+            margin: 4px 0;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
           }
+          
+          .shipping-box {
+            border: 2px solid #3b82f6;
+            background: #eff6ff;
+            padding: 6px;
+            border-radius: 3px;
+            text-align: center;
+            color: #1d4ed8;
+            font-size: 9px;
+            font-weight: bold;
+            margin: 4px 0;
+            font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
+          }
+          
           .footer {
             text-align: center;
-            margin-top: 20px;
-            padding-top: 10px;
+            margin-top: 10px;
+            padding-top: 6px;
             border-top: 1px solid #ddd;
             color: #666;
-            font-size: 8px;
+            font-size: 7px;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
           }
           table {
             width: 100%;
             border-collapse: collapse;
-            margin: 6px 0;
+            margin: 4px 0;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
           }
           th, td {
             border: 1px solid #ddd;
-            padding: 5px 6px;
+            padding: 3px 4px;
             text-align: right;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
-            font-size: 9px;
+            font-size: 7px;
           }
           th {
             background-color: #c19a5b;
@@ -315,74 +329,77 @@ export const generateSimplePDF = (order) => {
           .creator-info {
             background: #f8f9fa;
             border: 1px solid #e9ecef;
-            border-radius: 4px;
-            padding: 8px;
-            margin-top: 10px;
+            border-radius: 3px;
+            padding: 5px;
+            margin-top: 6px;
           }
           .creator-info h4 {
             color: #c19a5b;
-            margin: 0 0 5px 0;
-            font-size: 11px;
+            margin: 0 0 3px 0;
+            font-size: 9px;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
             font-weight: bold;
           }
           .creator-info p {
-            margin: 2px 0;
-            font-size: 9px;
+            margin: 1px 0;
+            font-size: 7px;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
           }
           @media print {
             body { 
               margin: 0;
-              font-size: 9px;
+              font-size: 7px;
               font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
-              max-width: 148mm;
-              width: 148mm;
-              height: 210mm;
+              width: 100%;
+              max-width: none;
             }
             .no-print { 
               display: none !important;
             }
             .header {
               margin: 0;
-              padding: 8px;
+              padding: 4px;
             }
             .section {
               page-break-inside: avoid;
-              margin-bottom: 10px;
+              margin-bottom: 6px;
             }
             .info-grid {
               display: block;
             }
             .info-box {
-              margin-bottom: 6px;
+              margin-bottom: 4px;
             }
             .header h1 {
-              font-size: 16px;
+              font-size: 12px;
             }
             .order-info h2 {
-              font-size: 14px;
+              font-size: 10px;
             }
             .section h3 {
-              font-size: 11px;
-              padding: 4px 6px;
+              font-size: 8px;
+              padding: 3px 4px;
             }
             .collection-box {
-              font-size: 10px;
-              padding: 6px;
+              font-size: 7px;
+              padding: 4px;
+            }
+            .shipping-box {
+              font-size: 7px;
+              padding: 4px;
             }
             .info-box h4 {
-              font-size: 9px;
+              font-size: 7px;
             }
             .info-box p {
-              font-size: 8px;
+              font-size: 6px;
             }
             .creator-info p {
-              font-size: 8px;
+              font-size: 6px;
             }
             table th, table td {
-              font-size: 7px;
-              padding: 3px 4px;
+              font-size: 6px;
+              padding: 2px 3px;
             }
           }
           @media (max-width: 768px) {
@@ -481,6 +498,19 @@ export const generateSimplePDF = (order) => {
         }
         
         ${
+          order.shippingFee
+            ? `
+          <div class="section">
+            <h3>رسوم الشحن</h3>
+            <div class="shipping-box">
+              رسوم الشحن: ${parseFloat(order.shippingFee).toFixed(2)} ج.م
+            </div>
+          </div>
+        `
+            : ""
+        }
+        
+        ${
           order.User
             ? `
           <div class="section">
@@ -497,6 +527,30 @@ export const generateSimplePDF = (order) => {
               ${
                 order.User.address
                   ? `<p><strong>العنوان:</strong> ${order.User.address}</p>`
+                  : ""
+              }
+            </div>
+          </div>
+        `
+            : ""
+        }
+        
+        ${
+          order.DeliveryUser
+            ? `
+          <div class="section">
+            <h3>معلومات مندوب التوصيل</h3>
+            <div class="creator-info">
+              <h4>بيانات المندوب</h4>
+              <p><strong>الاسم:</strong> ${
+                order.DeliveryUser.name || "غير محدد"
+              }</p>
+              <p><strong>رقم الهاتف:</strong> ${
+                order.DeliveryUser.phone || "غير محدد"
+              }</p>
+              ${
+                order.DeliveryUser.email
+                  ? `<p><strong>البريد الإلكتروني:</strong> ${order.DeliveryUser.email}</p>`
                   : ""
               }
             </div>
@@ -573,10 +627,16 @@ export const testArabicSupport = () => {
     notes: "ملاحظات خاصة بالشحنة",
     isCollection: true,
     collectionPrice: "150.00",
+    shippingFee: "25.00",
     User: {
       name: "محمد أحمد",
       email: "mohamed@example.com",
       phone: "01123456789",
+    },
+    DeliveryUser: {
+      name: "أحمد علي",
+      phone: "01234567890",
+      email: "ahmed@delivery.com",
     },
   };
 

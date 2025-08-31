@@ -35,9 +35,10 @@ const port = process.env.PORT || 3000;
 // --- Core Middleware ---
 app.use(
   cors({
-    origin: process.env.NODE_ENV === "production" 
-      ? ["https://your-frontend-domain.vercel.app", "http://localhost:5173"]
-      : "http://localhost:5173",
+    origin:
+      process.env.NODE_ENV === "production"
+        ? ["https://your-frontend-domain.vercel.app", "http://localhost:5173"]
+        : "http://localhost:5173",
     credentials: true,
   })
 );
@@ -49,19 +50,19 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Health check endpoint
 app.get("/health", (req, res) => {
-  res.status(200).json({ 
-    status: "OK", 
+  res.status(200).json({
+    status: "OK",
     message: "Server is running",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
 // Root endpoint
 app.get("/", (req, res) => {
-  res.json({ 
+  res.json({
     message: "Shipping Management API",
     version: "1.0.0",
-    status: "running"
+    status: "running",
   });
 });
 

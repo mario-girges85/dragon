@@ -199,6 +199,7 @@ exports.getOrdersByUserId = async (req, res) => {
       include: [
         {
           model: User,
+          as: "User",
           attributes: ["name", "profile_image"],
         },
       ],
@@ -263,8 +264,12 @@ exports.getOrderById = async (req, res) => {
         .json({ success: false, message: "Order not found." });
     }
 
-    // Check if user is requesting their own order or is admin
-    if (order.userId !== requestingUserId && req.user.role !== "admin") {
+    // Check if user is requesting their own order, is admin, or is the assigned delivery person
+    if (
+      order.userId !== requestingUserId &&
+      req.user.role !== "admin" &&
+      order.deliveryUserId !== requestingUserId
+    ) {
       return res.status(403).json({
         success: false,
         message: "لا يمكنك الوصول إلى طلب آخر",
@@ -338,6 +343,7 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
+    const requestingUserId = req.user.id;
 
     const order = await Order.findByPk(id);
 
@@ -345,6 +351,18 @@ exports.updateOrderStatus = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "Order not found" });
+    }
+
+    // Check if user is admin, order creator, or assigned delivery person
+    if (
+      req.user.role !== "admin" &&
+      order.userId !== requestingUserId &&
+      order.deliveryUserId !== requestingUserId
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "لا يمكنك تحديث حالة طلب آخر",
+      });
     }
 
     order.status = status;
@@ -360,17 +378,18 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
-// Update delivery status by delivery personnel
+// Update delivery status by delivery personnel or admin
 exports.updateDeliveryStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, deliveryNotes } = req.body;
 
-    // Check if user is delivery personnel
-    if (req.user.role !== "delivery") {
+    // Check if user is delivery personnel or admin
+    if (req.user.role !== "delivery" && req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
-        message: "Only delivery personnel can update delivery status.",
+        message:
+          "Only delivery personnel or admins can update delivery status.",
       });
     }
 
@@ -383,21 +402,40 @@ exports.updateDeliveryStatus = async (req, res) => {
       });
     }
 
-    // Check if the order is assigned to this delivery user
-    if (order.deliveryUserId !== req.user.id) {
+    // Check if the order is assigned to this delivery user (skip for admins)
+    if (req.user.role === "delivery" && order.deliveryUserId !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: "You can only update orders assigned to you.",
       });
     }
 
-    // Validate status
-    const validStatuses = ["delivered", "returned"];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid status. Only 'delivered' or 'returned' are allowed.",
-      });
+    // Validate status based on user role
+    if (req.user.role === "delivery") {
+      // Delivery users can only set specific statuses
+      const validDeliveryStatuses = ["submitted", "delivered", "returned"];
+      if (!validDeliveryStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid status. Only 'submitted', 'delivered', or 'returned' are allowed.",
+        });
+      }
+    } else if (req.user.role === "admin") {
+      // Admin can set any status
+      const validAdminStatuses = [
+        "submitted",
+        "confirmed",
+        "delivered",
+        "returned",
+        "cancelled",
+      ];
+      if (!validAdminStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid status for admin.",
+        });
+      }
     }
 
     // If status is returned, delivery notes are required
@@ -417,6 +455,12 @@ exports.updateDeliveryStatus = async (req, res) => {
     if (deliveryNotes) {
       order.deliveryNotes = deliveryNotes.trim();
     }
+
+    // If status is "submitted" and user is delivery, change to "confirmed" (delivery confirms pickup)
+    if (status === "submitted" && req.user.role === "delivery") {
+      order.status = "confirmed";
+    }
+
     await order.save();
 
     // Get the updated order with user information
@@ -453,13 +497,26 @@ exports.updateDeliveryStatus = async (req, res) => {
 exports.assignOrderToDelivery = async (req, res) => {
   try {
     const { id } = req.params;
-    const { deliveryUserId } = req.body;
+    const { deliveryUserId, shippingFee } = req.body;
 
     // Check if user is admin
     if (req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Only administrators can assign orders to delivery personnel.",
+      });
+    }
+
+    // Validate shipping fee
+    if (
+      !shippingFee ||
+      isNaN(parseFloat(shippingFee)) ||
+      parseFloat(shippingFee) < 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Valid shipping fee is required when assigning order to delivery.",
       });
     }
 
@@ -488,29 +545,10 @@ exports.assignOrderToDelivery = async (req, res) => {
       });
     }
 
-    // Determine the next status based on current status
-    let nextStatus = order.status;
-    switch (order.status) {
-      case "pending":
-        nextStatus = "confirmed";
-        break;
-      case "confirmed":
-        nextStatus = "picked_up";
-        break;
-      case "picked_up":
-        nextStatus = "in_transit";
-        break;
-      case "in_transit":
-        nextStatus = "delivered";
-        break;
-      default:
-        // For delivered, cancelled, or returned orders, don't change status
-        break;
-    }
-
-    // Update the order with delivery assignment and status
+    // Update the order with delivery assignment, shipping fee, and change status to "submitted"
     order.deliveryUserId = deliveryUserId;
-    order.status = nextStatus;
+    order.shippingFee = parseFloat(shippingFee);
+    order.status = "submitted";
     await order.save();
 
     // Get the updated order with user information
@@ -531,7 +569,7 @@ exports.assignOrderToDelivery = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Order assigned to delivery personnel and status updated to ${nextStatus}`,
+      message: `Order assigned to delivery personnel with shipping fee ${shippingFee} and status updated to submitted`,
       order: updatedOrder,
     });
   } catch (error) {
@@ -539,6 +577,78 @@ exports.assignOrderToDelivery = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to assign order to delivery personnel.",
+    });
+  }
+};
+
+// Cancel order
+exports.cancelOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const requestingUserId = req.user.id;
+
+    const order = await Order.findByPk(id);
+
+    if (!order) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
+    }
+
+    // Check if user is admin, order creator, or assigned delivery person
+    if (req.user.role !== "admin" && order.userId !== requestingUserId) {
+      return res.status(403).json({
+        success: false,
+        message: "لا يمكنك إلغاء طلب آخر",
+      });
+    }
+
+    // Check if order can be cancelled
+    if (
+      order.status === "delivered" ||
+      order.status === "cancelled" ||
+      order.status === "returned"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "لا يمكن إلغاء الطلب في هذه الحالة",
+      });
+    }
+
+    // Update order status to cancelled
+    order.status = "cancelled";
+    if (reason) {
+      order.deliveryNotes = reason.trim();
+    }
+    await order.save();
+
+    // Get the updated order with user information
+    const updatedOrder = await Order.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: "User",
+          attributes: ["name", "profile_image"],
+        },
+        {
+          model: User,
+          as: "DeliveryUser",
+          attributes: ["name", "profile_image"],
+        },
+      ],
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "تم إلغاء الطلب بنجاح",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.error("Error cancelling order:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to cancel order.",
     });
   }
 };

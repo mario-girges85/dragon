@@ -29,6 +29,7 @@ const OrderCard = ({
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [shippingFee, setShippingFee] = useState("");
 
   const handleCardClick = () => {
     navigate(`/orders/${order.id}`);
@@ -48,11 +49,25 @@ const OrderCard = ({
       return;
     }
 
+    if (
+      !shippingFee ||
+      isNaN(parseFloat(shippingFee)) ||
+      parseFloat(shippingFee) < 0
+    ) {
+      alert("يرجى إدخال رسوم الشحن الصحيحة");
+      return;
+    }
+
     setIsAssigning(true);
     try {
-      await onAssignDelivery(order.id, selectedDeliveryUser);
+      await onAssignDelivery(
+        order.id,
+        selectedDeliveryUser,
+        parseFloat(shippingFee)
+      );
       setShowAssignmentModal(false);
       setSelectedDeliveryUser("");
+      setShippingFee("");
     } catch (error) {
       console.error("Error assigning delivery:", error);
     } finally {
@@ -134,13 +149,10 @@ const OrderCard = ({
 
   const getStatusStyles = (status) => {
     switch (status?.toLowerCase()) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
+      case "submitted":
+        return "bg-blue-100 text-blue-800";
       case "confirmed":
-        return "bg-blue-100 text-blue-800";
-      case "in_transit":
-      case "picked_up":
-        return "bg-blue-100 text-blue-800";
+        return "bg-green-100 text-green-800";
       case "delivered":
         return "bg-green-100 text-green-800";
       case "cancelled":
@@ -153,10 +165,8 @@ const OrderCard = ({
 
   const getStatusText = (status) => {
     const statusMap = {
-      pending: "في الانتظار",
+      submitted: "تم التقديم",
       confirmed: "مؤكد",
-      picked_up: "تم الاستلام",
-      in_transit: "قيد النقل",
       delivered: "تم التوصيل",
       cancelled: "ملغي",
       returned: "مرتجع",
@@ -259,6 +269,14 @@ const OrderCard = ({
               </span>
             </div>
           )}
+          {order.shippingFee && (
+            <div className="flex items-center text-blue-700 font-semibold">
+              <DollarSign className="w-5 h-5 text-blue-500 ml-3" />
+              <span>
+                رسوم الشحن: {parseFloat(order.shippingFee).toFixed(2)} $
+              </span>
+            </div>
+          )}
           {/* Delivery Assignment Info */}
           {order.DeliveryUser && (
             <div className="flex items-center text-blue-700 font-semibold">
@@ -327,39 +345,53 @@ const OrderCard = ({
                   const user = JSON.parse(userStr);
                   const isDeliveryUser = user.role === "delivery";
                   const isAssignedToUser = order.deliveryUserId === user.id;
-                  const canUpdateStatus =
-                    isDeliveryUser &&
-                    isAssignedToUser &&
-                    (order.status === "in_transit" ||
-                      order.status === "picked_up");
 
-                  if (canUpdateStatus) {
-                    return (
-                      <div className="flex gap-2">
+                  // Delivery users can update status based on current status
+                  if (isDeliveryUser && isAssignedToUser) {
+                    if (order.status === "submitted") {
+                      // Can confirm pickup
+                      return (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDeliverySuccess();
+                            updateDeliveryStatus(order.id, "submitted", "");
                           }}
                           disabled={isUpdatingStatus}
-                          className="flex items-center gap-1 px-3 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium transition-colors duration-200"
+                          className="flex items-center gap-1 px-3 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium transition-colors duration-200"
                         >
                           <CheckCircle className="w-4 h-4" />
-                          تم التوصيل
+                          تأكيد الاستلام
                         </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeliveryFailed();
-                          }}
-                          disabled={isUpdatingStatus}
-                          className="flex items-center gap-1 px-3 py-2 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium transition-colors duration-200"
-                        >
-                          <XCircle className="w-4 h-4" />
-                          لم يتم التوصيل
-                        </button>
-                      </div>
-                    );
+                      );
+                    } else if (order.status === "confirmed") {
+                      // Can mark as delivered or returned
+                      return (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeliverySuccess();
+                            }}
+                            disabled={isUpdatingStatus}
+                            className="flex items-center gap-1 px-3 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium transition-colors duration-200"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            تم التوصيل
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeliveryFailed();
+                            }}
+                            disabled={isUpdatingStatus}
+                            className="flex items-center gap-1 px-3 py-2 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium transition-colors duration-200"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            لم يتم التوصيل
+                          </button>
+                        </div>
+                      );
+                    }
                   }
                 }
                 return null;
@@ -394,10 +426,35 @@ const OrderCard = ({
               ))}
             </select>
 
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                رسوم الشحن<span className="text-red-500 mr-1">*</span>
+              </label>
+              <div className="relative">
+                <DollarSign className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="number"
+                  value={shippingFee}
+                  onChange={(e) => setShippingFee(e.target.value)}
+                  className="w-full pr-12 pl-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#c19a5b] focus:border-[#c19a5b] transition-all"
+                  placeholder="أدخل رسوم الشحن"
+                  min="0"
+                  step="0.01"
+                  required
+                />
+              </div>
+            </div>
+
             <div className="flex gap-3">
               <button
                 onClick={handleAssignDelivery}
-                disabled={isAssigning || !selectedDeliveryUser}
+                disabled={
+                  isAssigning ||
+                  !selectedDeliveryUser ||
+                  !shippingFee ||
+                  isNaN(parseFloat(shippingFee)) ||
+                  parseFloat(shippingFee) < 0
+                }
                 className="flex-1 bg-[#c19a5b] hover:bg-[#a88a4a] disabled:bg-gray-300 text-white py-2 px-4 rounded-lg font-medium transition-colors duration-200"
               >
                 {isAssigning ? "جاري التعيين..." : "تعيين"}

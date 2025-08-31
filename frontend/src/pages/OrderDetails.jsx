@@ -19,6 +19,7 @@ import {
   Download,
   TestTube,
   Truck,
+  X,
 } from "lucide-react";
 import { generateOrderPDFWithFallback } from "../util/pdfGenerator";
 
@@ -28,6 +29,13 @@ const OrderDetails = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [newStatus, setNewStatus] = useState("");
+  const [deliveryNotes, setDeliveryNotes] = useState("");
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -88,11 +96,10 @@ const OrderDetails = () => {
 
   const getStatusStyles = (status) => {
     switch (status?.toLowerCase()) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "in_transit":
-      case "picked_up":
+      case "submitted":
         return "bg-blue-100 text-blue-800 border-blue-200";
+      case "confirmed":
+        return "bg-green-100 text-green-800 border-green-200";
       case "delivered":
         return "bg-green-100 text-green-800 border-green-200";
       case "cancelled":
@@ -105,12 +112,10 @@ const OrderDetails = () => {
 
   const getStatusText = (status) => {
     switch (status?.toLowerCase()) {
-      case "pending":
-        return "في الانتظار";
-      case "in_transit":
-        return "قيد النقل";
-      case "picked_up":
-        return "تم الاستلام";
+      case "submitted":
+        return "تم التقديم";
+      case "confirmed":
+        return "مؤكد";
       case "delivered":
         return "تم التوصيل";
       case "cancelled":
@@ -143,6 +148,126 @@ const OrderDetails = () => {
       message
     )}`;
     window.open(whatsappUrl, "_blank");
+  };
+
+  const handleCancelOrder = async () => {
+    if (!cancelReason.trim()) {
+      alert("يرجى إدخال سبب الإلغاء");
+      return;
+    }
+
+    setCancelling(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_BASE}/orders/${orderId}/cancel`,
+        { reason: cancelReason },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Update the order with new status
+        setOrder(response.data.order);
+        setShowCancelModal(false);
+        setCancelReason("");
+        alert("تم إلغاء الطلب بنجاح");
+      }
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      alert(error.response?.data?.message || "حدث خطأ أثناء إلغاء الطلب");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleStatusUpdate = async () => {
+    if (!newStatus) {
+      alert("يرجى اختيار الحالة الجديدة");
+      return;
+    }
+
+    setUpdatingStatus(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_BASE}/orders/${orderId}/delivery-status`,
+        {
+          status: newStatus,
+          deliveryNotes: deliveryNotes.trim() || undefined,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Update the order with new status
+        setOrder(response.data.order);
+        setShowStatusModal(false);
+        setNewStatus("");
+        setDeliveryNotes("");
+        alert("تم تحديث حالة الطلب بنجاح");
+      }
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      alert(error.response?.data?.message || "حدث خطأ أثناء تحديث حالة الطلب");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const canCancelOrder = () => {
+    if (!order) return false;
+
+    // Admin can cancel any order
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    if (user.role === "admin") return true;
+
+    // Order creator can cancel their own orders
+    if (user.id === order.userId) return true;
+
+    // Delivery users cannot cancel orders
+    if (user.role === "delivery") return false;
+
+    // Can cancel: submitted, confirmed
+    // Cannot cancel: delivered, cancelled, returned
+    return ["submitted", "confirmed"].includes(order.status);
+  };
+
+  const canUpdateStatus = () => {
+    if (!order) return false;
+
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+    // Admin can update any order status
+    if (user.role === "admin") return true;
+
+    // Delivery users cannot update order status (removed this functionality)
+    if (user.role === "delivery") return false;
+
+    return false;
+  };
+
+  const getAvailableStatuses = () => {
+    if (!order) return [];
+
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+    if (user.role === "admin") {
+      // Admin can set any status
+      return ["submitted", "confirmed", "delivered", "returned", "cancelled"];
+    }
+
+    // Delivery users cannot update order statuses
+    if (user.role === "delivery") return [];
+
+    return [];
   };
 
   if (loading) {
@@ -231,6 +356,24 @@ const OrderDetails = () => {
                   <Download className="w-5 h-5 ml-2" />
                   تحميل PDF
                 </button>
+                {canCancelOrder() && (
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="flex items-center justify-center bg-red-500 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg hover:bg-red-600 transition-colors font-medium shadow-md w-full sm:w-auto max-w-full sm:max-w-xs"
+                  >
+                    <X className="w-5 h-5 ml-2" />
+                    إلغاء الطلب
+                  </button>
+                )}
+                {canUpdateStatus() && (
+                  <button
+                    onClick={() => setShowStatusModal(true)}
+                    className="flex items-center justify-center bg-blue-500 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-md w-full sm:w-auto max-w-full sm:max-w-xs"
+                  >
+                    <Edit className="w-5 h-5 ml-2" />
+                    تحديث الحالة
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -408,6 +551,25 @@ const OrderDetails = () => {
                     </span>
                     <span className="text-2xl font-bold text-green-700">
                       {parseFloat(order.collectionPrice).toFixed(2)} $
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {order.shippingFee && (
+              <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
+                  <DollarSign className="w-5 h-5 text-blue-600 ml-2" />
+                  رسوم الشحن
+                </h3>
+                <div className="bg-blue-50 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-blue-800 font-medium">
+                      رسوم الشحن
+                    </span>
+                    <span className="text-2xl font-bold text-blue-700">
+                      {parseFloat(order.shippingFee).toFixed(2)} $
                     </span>
                   </div>
                 </div>
@@ -593,6 +755,105 @@ const OrderDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* Status Update Modal */}
+      {showStatusModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">
+              تحديث حالة الطلب
+            </h3>
+            <p className="text-gray-600 mb-4 text-center">
+              اختر الحالة الجديدة للطلب
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-medium mb-2">
+                الحالة الجديدة
+              </label>
+              <select
+                value={newStatus}
+                onChange={(e) => setNewStatus(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">اختر الحالة...</option>
+                {getAvailableStatuses().map((status) => (
+                  <option key={status} value={status}>
+                    {getStatusText(status)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-medium mb-2">
+                ملاحظات التوصيل (اختياري)
+              </label>
+              <textarea
+                value={deliveryNotes}
+                onChange={(e) => setDeliveryNotes(e.target.value)}
+                placeholder="أضف ملاحظات حول التوصيل..."
+                className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows="3"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowStatusModal(false)}
+                className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                disabled={updatingStatus}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleStatusUpdate}
+                className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                disabled={updatingStatus || !newStatus}
+              >
+                {updatingStatus ? "جاري التحديث..." : "تحديث الحالة"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Order Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">
+              إلغاء الطلب
+            </h3>
+            <p className="text-gray-600 mb-4 text-center">
+              هل أنت متأكد من إلغاء هذا الطلب؟ يرجى إدخال سبب الإلغاء.
+            </p>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="سبب الإلغاء..."
+              className="w-full p-3 border border-gray-300 rounded-lg mb-4 resize-none"
+              rows="3"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCancelModal(false)}
+                className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                disabled={cancelling}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleCancelOrder}
+                className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+                disabled={cancelling}
+              >
+                {cancelling ? "جاري الإلغاء..." : "تأكيد الإلغاء"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

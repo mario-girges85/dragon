@@ -37,4 +37,7 @@ router.put(
 // PUT /api/orders/:id/delivery-status - Update delivery status by delivery personnel
 router.put("/:id/delivery-status", orderController.updateDeliveryStatus);
 
+// PUT /api/orders/:id/cancel - Cancel order (admin or order creator)
+router.put("/:id/cancel", orderController.cancelOrder);
+
 module.exports = router;

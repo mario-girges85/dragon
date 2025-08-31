@@ -133,7 +133,7 @@ const OrdersPage = () => {
   }, [isAdmin]);
 
   // Handle delivery assignment
-  const handleAssignDelivery = async (orderId, deliveryUserId) => {
+  const handleAssignDelivery = async (orderId, deliveryUserId, shippingFee) => {
     const token = localStorage.getItem("token");
     if (!token) {
       alert("يرجى تسجيل الدخول مرة أخرى");
@@ -143,7 +143,7 @@ const OrdersPage = () => {
     try {
       const response = await axios.put(
         `${import.meta.env.VITE_ASSIGN_DELIVERY}${orderId}/assign-delivery`,
-        { deliveryUserId },
+        { deliveryUserId, shippingFee },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -181,10 +181,11 @@ const OrdersPage = () => {
   const statusTabs = [
     { id: "all", label: "جميع الطلبات", count: orders.length },
     {
-      id: "pending",
-      label: "في الانتظار",
-      count: orders.filter((order) => order.status?.toLowerCase() === "pending")
-        .length,
+      id: "submitted",
+      label: "تم التقديم",
+      count: orders.filter(
+        (order) => order.status?.toLowerCase() === "submitted"
+      ).length,
     },
     {
       id: "confirmed",
@@ -194,25 +195,24 @@ const OrdersPage = () => {
       ).length,
     },
     {
-      id: "picked_up",
-      label: "تم الاستلام",
-      count: orders.filter(
-        (order) => order.status?.toLowerCase() === "picked_up"
-      ).length,
-    },
-    {
-      id: "in_transit",
-      label: "قيد النقل",
-      count: orders.filter(
-        (order) => order.status?.toLowerCase() === "in_transit"
-      ).length,
-    },
-
-    {
       id: "delivered",
       label: "تم التوصيل",
       count: orders.filter(
         (order) => order.status?.toLowerCase() === "delivered"
+      ).length,
+    },
+    {
+      id: "returned",
+      label: "مرتجع",
+      count: orders.filter(
+        (order) => order.status?.toLowerCase() === "returned"
+      ).length,
+    },
+    {
+      id: "cancelled",
+      label: "ملغي",
+      count: orders.filter(
+        (order) => order.status?.toLowerCase() === "cancelled"
       ).length,
     },
   ];
@@ -285,16 +285,20 @@ const OrdersPage = () => {
 
   // Calculate statistics
   const totalOrders = orders.length;
-  const pendingOrders = orders.filter(
-    (order) => order.status?.toLowerCase() === "pending"
+  const submittedOrders = orders.filter(
+    (order) => order.status?.toLowerCase() === "submitted"
+  ).length;
+  const confirmedOrders = orders.filter(
+    (order) => order.status?.toLowerCase() === "confirmed"
   ).length;
   const deliveredOrders = orders.filter(
     (order) => order.status?.toLowerCase() === "delivered"
   ).length;
-  const inTransitOrders = orders.filter(
-    (order) =>
-      order.status?.toLowerCase() === "in_transit" ||
-      order.status?.toLowerCase() === "picked_up"
+  const returnedOrders = orders.filter(
+    (order) => order.status?.toLowerCase() === "returned"
+  ).length;
+  const cancelledOrders = orders.filter(
+    (order) => order.status?.toLowerCase() === "cancelled"
   ).length;
 
   // --- Conditional Rendering ---
@@ -389,7 +393,7 @@ const OrdersPage = () => {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8 sm:mb-12">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8 sm:mb-12">
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 sm:p-6 text-center">
             <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
               {totalOrders}
@@ -398,25 +402,29 @@ const OrdersPage = () => {
               إجمالي الطلبات
             </div>
           </div>
-          <div className="bg-yellow-500/20 backdrop-blur-sm rounded-2xl p-4 sm:p-6 text-center">
-            <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
-              {pendingOrders}
-            </div>
-            <div className="text-white/80 text-sm sm:text-base">
-              في الانتظار
-            </div>
-          </div>
           <div className="bg-blue-500/20 backdrop-blur-sm rounded-2xl p-4 sm:p-6 text-center">
             <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
-              {inTransitOrders}
+              {submittedOrders}
             </div>
-            <div className="text-white/80 text-sm sm:text-base">قيد النقل</div>
+            <div className="text-white/80 text-sm sm:text-base">تم التقديم</div>
+          </div>
+          <div className="bg-green-500/20 backdrop-blur-sm rounded-2xl p-4 sm:p-6 text-center">
+            <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
+              {confirmedOrders}
+            </div>
+            <div className="text-white/80 text-sm sm:text-base">مؤكد</div>
           </div>
           <div className="bg-green-500/20 backdrop-blur-sm rounded-2xl p-4 sm:p-6 text-center">
             <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
               {deliveredOrders}
             </div>
             <div className="text-white/80 text-sm sm:text-base">تم التوصيل</div>
+          </div>
+          <div className="bg-red-500/20 backdrop-blur-sm rounded-2xl p-4 sm:p-6 text-center">
+            <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
+              {returnedOrders + cancelledOrders}
+            </div>
+            <div className="text-white/80 text-sm sm:text-base">مرتجع/ملغي</div>
           </div>
         </div>
 

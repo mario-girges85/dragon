@@ -19,9 +19,9 @@ const Order = sequelize.define(
       allowNull: false,
       unique: true,
       defaultValue: () => {
-        const timestamp = Date.now().toString(36);
-        const random = crypto.randomBytes(3).toString("hex");
-        return `ORD-${timestamp}-${random}`.toUpperCase();
+        // Generate a 6-digit order number
+        const random = Math.floor(100000 + Math.random() * 900000);
+        return random.toString();
       },
     },
     senderName: {
@@ -65,6 +65,11 @@ const Order = sequelize.define(
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
     },
+    shippingFee: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      comment: "Shipping fee set by admin when assigning to delivery",
+    },
     packageImageUrl: {
       type: DataTypes.STRING(500),
       allowNull: true,
@@ -75,15 +80,13 @@ const Order = sequelize.define(
     },
     status: {
       type: DataTypes.ENUM(
-        "pending",
+        "submitted",
         "confirmed",
-        "picked_up",
-        "in_transit",
         "delivered",
         "cancelled",
         "returned"
       ),
-      defaultValue: "pending",
+      defaultValue: "submitted",
       allowNull: false,
     },
     userId: {

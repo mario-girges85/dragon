@@ -1,0 +1,166 @@
+const User = require("../models/user");
+const bcrypt = require("bcrypt");
+const multer = require("multer");
+const sharp = require("sharp");
+const path = require("path");
+const fs = require("fs").promises;
+// //for testing only
+// module.exports.image = (req, res) => {
+//   console.log(req.file);
+// };
+
+// // Create uploads directory if it doesn't exist
+// async function createUploadsDir(userId = null) {
+//   const baseDir = path.join(__dirname, "..", "uploads", "profiles");
+//   try {
+//     await fs.access(baseDir);
+//   } catch {
+//     await fs.mkdir(baseDir, { recursive: true });
+//   }
+//   if (userId) {
+//     const userDir = path.join(baseDir, userId.toString());
+//     try {
+//       await fs.access(userDir);
+//     } catch {
+//       await fs.mkdir(userDir, { recursive: true });
+//     }
+//   }
+// }
+// createUploadsDir();
+
+// const upload = multer({
+//   storage: multer.memoryStorage(),
+//   limits: {
+//     fileSize: 5 * 1024 * 1024, // 5MB limit
+//     files: 1,
+//   },
+//   fileFilter: (req, file, cb) => {
+//     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+//     if (allowedTypes.includes(file.mimetype)) {
+//       cb(null, true);
+//     } else {
+//       cb(new Error("نوع الملف غير صالح. يُسمح فقط بملفات JPEG وPNG وWebP"));
+//     }
+//   },
+// });
+
+// const processImage = async (buffer, userId) => {
+//   await createUploadsDir(userId);
+//   const filename = userId.toString() + " image.webp";
+//   const outputPath = path.join(
+//     __dirname,
+//     "..",
+//     "uploads",
+//     "profiles",
+//     userId.toString(),
+//     filename
+//   );
+//   await sharp(buffer)
+//     .resize(400, 400, { fit: "cover", position: "center" })
+//     .webp({ quality: 85 })
+//     .toFile(outputPath);
+//   return `/uploads/profiles/${userId}/${filename}`;
+// };
+
+// // Create user with image upload
+// module.exports.createUser = async (req, res) => {
+//   console.log(req.body);
+
+//   try {
+//     const { name, email, phone, password, address } = req.body;
+//     if (!name || !phone || !password || !address) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "جميع الحقول المطلوبة يجب ملؤها",
+//       });
+//     }
+//     const existingUser = await User.findOne({ where: { phone: phone } });
+//     if (existingUser) {
+//       return res.status(409).json({
+//         success: false,
+//         message: "رقم الهاتف مسجل مسبقاً",
+//       });
+//     }
+//     if (email) {
+//       const existingEmail = await User.findOne({ where: { email: email } });
+//       if (existingEmail) {
+//         return res.status(409).json({
+//           success: false,
+//           message: "البريد الإلكتروني مسجل مسبقاً",
+//         });
+//       }
+//     }
+//     const saltRounds = 12;
+//     const hashedPassword = await bcrypt.hash(password, saltRounds);
+//     const transaction = await User.sequelize.transaction();
+//     try {
+//       const newUser = await User.create(
+//         {
+//           name,
+//           email: email || null,
+//           phone,
+//           password: hashedPassword,
+//           address,
+//           profile_image: null,
+//         },
+//         { transaction }
+//       );
+//       let profileImagePath = null;
+//       if (req.file) {
+//         try {
+//           profileImagePath = await processImage(req.file.buffer, newUser.id);
+//           await newUser.update(
+//             { profile_image: profileImagePath },
+//             { transaction }
+//           );
+//         } catch (imageError) {
+//           console.error("Image processing error:", imageError);
+//           profileImagePath = null;
+//         }
+//       }
+//       await transaction.commit();
+//       const userResponse = {
+//         id: newUser.id,
+//         name: newUser.name,
+//         email: newUser.email,
+//         phone: newUser.phone,
+//         address: newUser.address,
+//         profile_image: profileImagePath,
+//         createdAt: newUser.createdAt,
+//       };
+//       res.status(201).json({
+//         success: true,
+//         message: "تم إنشاء الحساب بنجاح",
+//         user: userResponse,
+//       });
+//     } catch (error) {
+//       await transaction.rollback();
+//       throw error;
+//     }
+//   } catch (error) {
+//     console.error("Signup error details:", {
+//       message: error.message,
+//       stack: error.stack,
+//       name: error.name,
+//     });
+//     if (error.name === "SequelizeValidationError") {
+//       return res.status(400).json({
+//         success: false,
+//         message: "خطأ في البيانات المدخلة",
+//       });
+//     }
+//     if (error.name === "SequelizeUniqueConstraintError") {
+//       return res.status(409).json({
+//         success: false,
+//         message: "البيانات مسجلة مسبقاً",
+//       });
+//     }
+//     res.status(500).json({
+//       success: false,
+//       message: "حدث خطأ داخلي. حاول مجدداً",
+//       error: process.env.NODE_ENV === "development" ? error.message : undefined,
+//     });
+//   }
+// };
+
+// module.exports.uploadMiddleware = upload.single("profileImage");
