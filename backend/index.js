@@ -26,19 +26,21 @@ Order.belongsTo(User, { foreignKey: "deliveryUserId", as: "DeliveryUser" });
 // ------------------------------------
 // --- Routes ---
 
-const usersRouter = require("./routes/users");
-const orderRouter = require("./routes/order");
+const usersRouter = require("./Routes/users");
+const orderRouter = require("./Routes/order");
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 // --- Core Middleware ---
+const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === "production"
-        ? ["https://your-frontend-domain.vercel.app", "http://localhost:5173"]
-        : "http://localhost:5173",
+    origin: allowedOrigins,
     credentials: true,
   })
 );

@@ -26,6 +26,19 @@ const OrdersPage = () => {
   // State for delivery users (admin only)
   const [deliveryUsers, setDeliveryUsers] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  // Selection & bulk assign state (admin only)
+  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+  const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
+  const [bulkDeliveryUser, setBulkDeliveryUser] = useState("");
+  const [bulkShippingFee, setBulkShippingFee] = useState("");
+  const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
+
+  // Clear selections when leaving the unassigned tab
+  useEffect(() => {
+    if (activeTab !== "unassigned") {
+      setSelectedOrderIds([]);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -180,11 +193,21 @@ const OrdersPage = () => {
   // Status tabs configuration
   const statusTabs = [
     { id: "all", label: "جميع الطلبات", count: orders.length },
+    ...(isAdmin
+      ? [
+          {
+            id: "unassigned",
+            label: "غير مُسندة",
+            count: orders.filter((order) => !order.deliveryUserId).length,
+          },
+        ]
+      : []),
     {
       id: "submitted",
       label: "تم التقديم",
       count: orders.filter(
-        (order) => order.status?.toLowerCase() === "submitted"
+        (order) =>
+          order.status?.toLowerCase() === "submitted" && !!order.deliveryUserId
       ).length,
     },
     {
@@ -217,16 +240,33 @@ const OrdersPage = () => {
     },
   ];
 
+  // If a non-admin somehow has the unassigned tab active, reset to all
+  useEffect(() => {
+    if (!isAdmin && activeTab === "unassigned") {
+      setActiveTab("all");
+    }
+  }, [isAdmin, activeTab]);
+
   // Filter orders based on search term and active tab
   const filteredOrders = orders.filter((order) => {
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
       order.orderNumber?.toLowerCase().includes(searchLower) ||
       order.senderName?.toLowerCase().includes(searchLower) ||
-      order.receiverName?.toLowerCase().includes(searchLower);
+      order.receiverName?.toLowerCase().includes(searchLower) ||
+      (order.receiverPhone?.toString() || "").includes(searchLower);
 
-    const matchesTab =
-      activeTab === "all" || order.status?.toLowerCase() === activeTab;
+    let matchesTab = false;
+    if (activeTab === "all") {
+      matchesTab = true;
+    } else if (activeTab === "unassigned") {
+      matchesTab = !order.deliveryUserId;
+    } else if (activeTab === "submitted") {
+      matchesTab =
+        order.status?.toLowerCase() === "submitted" && !!order.deliveryUserId;
+    } else {
+      matchesTab = order.status?.toLowerCase() === activeTab;
+    }
 
     return matchesSearch && matchesTab;
   });
@@ -502,22 +542,75 @@ const OrdersPage = () => {
           </div>
         </div>
 
+        {/* Bulk actions bar (admin only) for unassigned orders */}
+        {isAdmin && activeTab === "unassigned" && (
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 sm:p-6 mb-6">
+            <div
+              className="flex flex-col sm:flex-row items-center justify-between gap-3"
+              dir="rtl"
+            >
+              <div className="text-white/90 text-sm">
+                تم تحديد {selectedOrderIds.length} طلب
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowBulkAssignModal(true)}
+                  disabled={selectedOrderIds.length === 0}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 bg-[#c19a5b] text-white disabled:bg-white/20 disabled:text-white/60"
+                >
+                  تعيين مندوب + رسوم شحن (متعدد)
+                </button>
+                <button
+                  onClick={() => setSelectedOrderIds([])}
+                  disabled={selectedOrderIds.length === 0}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 bg-white/10 hover:bg-white/20 text-white disabled:opacity-50"
+                >
+                  إلغاء التحديد
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Orders Content */}
         {orders.length > 0 ? (
           <>
             {filteredOrders.length > 0 ? (
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
-                  {currentOrders.map((order) => (
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      onAssignDelivery={handleAssignDelivery}
-                      deliveryUsers={deliveryUsers}
-                      isAdmin={isAdmin}
-                      onDeliveryStatusUpdate={handleDeliveryStatusUpdate}
-                    />
-                  ))}
+                  {currentOrders.map((order) => {
+                    const isChecked = selectedOrderIds.includes(order.id);
+                    return (
+                      <div key={order.id} className="relative">
+                        {isAdmin && activeTab === "unassigned" && (
+                          <label className="absolute -top-3 -right-3 z-10">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                setSelectedOrderIds((prev) => {
+                                  if (e.target.checked) {
+                                    return Array.from(
+                                      new Set([...prev, order.id])
+                                    );
+                                  }
+                                  return prev.filter((id) => id !== order.id);
+                                });
+                              }}
+                              className="w-5 h-5 accent-[#c19a5b]"
+                            />
+                          </label>
+                        )}
+                        <OrderCard
+                          order={order}
+                          onAssignDelivery={handleAssignDelivery}
+                          deliveryUsers={deliveryUsers}
+                          isAdmin={isAdmin}
+                          onDeliveryStatusUpdate={handleDeliveryStatusUpdate}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Pagination */}
@@ -658,8 +751,130 @@ const OrdersPage = () => {
           </div>
         )}
       </div>
+      {showBulkAssignModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full" dir="rtl">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">
+              تعيين جماعي لمندوب + رسوم شحن
+            </h3>
+            <p className="text-gray-600 mb-4">
+              عدد الطلبات المحددة: {selectedOrderIds.length}
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                مندوب التوصيل
+              </label>
+              <select
+                value={bulkDeliveryUser}
+                onChange={(e) => setBulkDeliveryUser(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#c19a5b]"
+              >
+                <option value="">اختر مندوب التوصيل</option>
+                {deliveryUsers?.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} - {user.phone}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                رسوم الشحن
+              </label>
+              <input
+                type="number"
+                value={bulkShippingFee}
+                onChange={(e) => setBulkShippingFee(e.target.value)}
+                min="0"
+                step="0.01"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#c19a5b]"
+                placeholder="أدخل رسوم الشحن"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  if (!bulkDeliveryUser) {
+                    alert("يرجى اختيار مندوب التوصيل");
+                    return;
+                  }
+                  if (
+                    !bulkShippingFee ||
+                    isNaN(parseFloat(bulkShippingFee)) ||
+                    parseFloat(bulkShippingFee) < 0
+                  ) {
+                    alert("يرجى إدخال رسوم الشحن الصحيحة");
+                    return;
+                  }
+                  setIsBulkSubmitting(true);
+                  try {
+                    const token = localStorage.getItem("token");
+                    const bulkUrl =
+                      import.meta.env.VITE_BULK_ASSIGN_DELIVERY ||
+                      `${import.meta.env.VITE_ORDERS}/bulk/assign-delivery`;
+                    const resp = await axios.put(
+                      bulkUrl,
+                      {
+                        orderIds: selectedOrderIds,
+                        deliveryUserId: bulkDeliveryUser,
+                        shippingFee: parseFloat(bulkShippingFee),
+                      },
+                      { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    if (resp.data.success) {
+                      const updated = resp.data.orders || [];
+                      setOrders((prev) => {
+                        const map = new Map(prev.map((o) => [o.id, o]));
+                        updated.forEach((u) =>
+                          map.set(u.id, { ...map.get(u.id), ...u })
+                        );
+                        return Array.from(map.values());
+                      });
+                      setSelectedOrderIds([]);
+                      setShowBulkAssignModal(false);
+                      setBulkDeliveryUser("");
+                      setBulkShippingFee("");
+                      alert("تم التعيين الجماعي بنجاح");
+                    } else {
+                      alert(resp.data.message || "فشل في التعيين الجماعي");
+                    }
+                  } catch (err) {
+                    console.error("Bulk assign error:", err);
+                    alert(
+                      err.response?.data?.message ||
+                        "حدث خطأ أثناء التعيين الجماعي"
+                    );
+                  } finally {
+                    setIsBulkSubmitting(false);
+                  }
+                }}
+                disabled={
+                  isBulkSubmitting ||
+                  selectedOrderIds.length === 0 ||
+                  !bulkDeliveryUser ||
+                  !bulkShippingFee ||
+                  isNaN(parseFloat(bulkShippingFee)) ||
+                  parseFloat(bulkShippingFee) < 0
+                }
+                className="flex-1 bg-[#c19a5b] hover:bg-[#a88a4a] disabled:bg-gray-300 text-white py-2 px-4 rounded-lg font-medium transition-colors duration-200"
+              >
+                {isBulkSubmitting ? "جاري التعيين..." : "تعيين"}
+              </button>
+              <button
+                onClick={() => setShowBulkAssignModal(false)}
+                disabled={isBulkSubmitting}
+                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg font-medium transition-colors duration-200"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default OrdersPage;
+
+// Bulk Assign Modal appended at end of return above

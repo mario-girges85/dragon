@@ -27,6 +27,13 @@ router.get("/:id", orderController.getOrderById);
 // PUT /api/orders/:id/status - Update order status
 router.put("/:id/status", orderController.updateOrderStatus);
 
+// PUT /api/orders/bulk/assign-delivery - Bulk assign multiple orders to a delivery personnel (admin only)
+router.put(
+  "/bulk/assign-delivery",
+  verifyAdmin,
+  orderController.bulkAssignOrdersToDelivery
+);
+
 // PUT /api/orders/:id/assign-delivery - Assign order to delivery personnel (admin only)
 router.put(
   "/:id/assign-delivery",
@@ -34,10 +41,20 @@ router.put(
   orderController.assignOrderToDelivery
 );
 
+// Alias: PUT /api/orders/assign-delivery/bulk - supports alternate path ordering
+router.put(
+  "/assign-delivery/bulk",
+  verifyAdmin,
+  orderController.bulkAssignOrdersToDelivery
+);
+
 // PUT /api/orders/:id/delivery-status - Update delivery status by delivery personnel
 router.put("/:id/delivery-status", orderController.updateDeliveryStatus);
 
 // PUT /api/orders/:id/cancel - Cancel order (admin or order creator)
 router.put("/:id/cancel", orderController.cancelOrder);
+
+// DELETE /api/orders/:id - Delete order (admin or order creator)
+router.delete("/:id", orderController.deleteOrder);
 
 module.exports = router;

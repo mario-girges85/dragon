@@ -343,6 +343,11 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
+    const providedReason = (
+      req.body.reason ||
+      req.body.deliveryNotes ||
+      ""
+    ).trim();
     const requestingUserId = req.user.id;
 
     const order = await Order.findByPk(id);
@@ -365,7 +370,27 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
+    // If admin sets to cancelled or returned, require a reason
+    if (
+      req.user.role === "admin" &&
+      (status === "cancelled" || status === "returned") &&
+      !providedReason
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Reason is required when admin sets status to cancelled or returned.",
+      });
+    }
+
     order.status = status;
+    if (
+      req.user.role === "admin" &&
+      (status === "cancelled" || status === "returned") &&
+      providedReason
+    ) {
+      order.deliveryNotes = providedReason;
+    }
     await order.save();
 
     res
@@ -434,6 +459,17 @@ exports.updateDeliveryStatus = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: "Invalid status for admin.",
+        });
+      }
+      // Require reason for admin when cancelling or returning
+      if (
+        (status === "cancelled" || status === "returned") &&
+        (!deliveryNotes || deliveryNotes.trim() === "")
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Reason (deliveryNotes) is required when admin sets cancelled or returned.",
         });
       }
     }
@@ -581,6 +617,114 @@ exports.assignOrderToDelivery = async (req, res) => {
   }
 };
 
+// Bulk assign multiple orders to a delivery personnel with a single shipping fee
+exports.bulkAssignOrdersToDelivery = async (req, res) => {
+  try {
+    const { orderIds, deliveryUserId, shippingFee } = req.body;
+
+    // Admin check is enforced by route middleware as well, but keep for safety
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only administrators can assign orders to delivery personnel.",
+      });
+    }
+
+    // Validate inputs
+    if (!Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "orderIds must be a non-empty array",
+      });
+    }
+
+    if (!deliveryUserId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "deliveryUserId is required" });
+    }
+
+    if (
+      shippingFee === undefined ||
+      shippingFee === null ||
+      isNaN(parseFloat(shippingFee)) ||
+      parseFloat(shippingFee) < 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid shipping fee is required",
+      });
+    }
+
+    // Verify the delivery user exists and is a delivery role
+    const deliveryUser = await User.findByPk(deliveryUserId);
+    if (!deliveryUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Delivery user not found" });
+    }
+    if (deliveryUser.role !== "delivery") {
+      return res.status(400).json({
+        success: false,
+        message: "Selected user is not a delivery personnel",
+      });
+    }
+
+    // Fetch all orders to be updated
+    const orders = await Order.findAll({ where: { id: orderIds } });
+    if (orders.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No matching orders found" });
+    }
+
+    // Update all orders
+    const numericFee = parseFloat(shippingFee);
+    await Promise.all(
+      orders.map(async (order) => {
+        // Skip orders that are finalized
+        if (
+          order.status === "delivered" ||
+          order.status === "cancelled" ||
+          order.status === "returned"
+        ) {
+          return;
+        }
+        order.deliveryUserId = deliveryUserId;
+        order.shippingFee = numericFee;
+        order.status = "submitted";
+        await order.save();
+      })
+    );
+
+    // Return the updated orders with relations
+    const updatedOrders = await Order.findAll({
+      where: { id: orderIds },
+      include: [
+        { model: User, as: "User", attributes: ["name", "profile_image"] },
+        {
+          model: User,
+          as: "DeliveryUser",
+          attributes: ["name", "profile_image"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Orders assigned to delivery personnel successfully",
+      orders: updatedOrders,
+    });
+  } catch (error) {
+    console.error("Error bulk assigning orders:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to bulk assign orders to delivery personnel.",
+    });
+  }
+};
+
 // Cancel order
 exports.cancelOrder = async (req, res) => {
   try {
@@ -614,6 +758,16 @@ exports.cancelOrder = async (req, res) => {
         success: false,
         message: "لا يمكن إلغاء الطلب في هذه الحالة",
       });
+    }
+
+    // If admin cancels, reason is required
+    if (req.user.role === "admin") {
+      if (!reason || reason.trim() === "") {
+        return res.status(400).json({
+          success: false,
+          message: "Reason is required when admin cancels an order.",
+        });
+      }
     }
 
     // Update order status to cancelled
@@ -650,5 +804,51 @@ exports.cancelOrder = async (req, res) => {
       success: false,
       message: "Failed to cancel order.",
     });
+  }
+};
+
+// Permanently delete an order (admin or order creator)
+exports.deleteOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const requestingUserId = req.user.id;
+
+    const order = await Order.findByPk(id);
+
+    if (!order) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
+    }
+
+    // Only admin or the creator of the order can delete
+    if (req.user.role !== "admin" && order.userId !== requestingUserId) {
+      return res.status(403).json({
+        success: false,
+        message: "لا يمكنك حذف طلب ليس لك",
+      });
+    }
+
+    // Attempt to delete associated package image from disk if present
+    try {
+      if (order.packageImageUrl && fs.existsSync(order.packageImageUrl)) {
+        fs.unlinkSync(order.packageImageUrl);
+      }
+    } catch (fileErr) {
+      console.error("Error deleting package image:", fileErr);
+      // continue even if file deletion fails
+    }
+
+    await order.destroy();
+
+    return res.status(200).json({
+      success: true,
+      message: "تم حذف الطلب بنجاح",
+    });
+  } catch (error) {
+    console.error("Error deleting order:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to delete order." });
   }
 };

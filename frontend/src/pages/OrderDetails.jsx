@@ -36,13 +36,15 @@ const OrderDetails = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [newStatus, setNewStatus] = useState("");
   const [deliveryNotes, setDeliveryNotes] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
       try {
         const token = localStorage.getItem("token");
         console.log("Fetching order details for ID:", orderId);
-        console.log("API Base URL:", import.meta.env.VITE_API_BASE);
+        console.log("Orders API Base:", import.meta.env.VITE_ORDERS);
         console.log("Token:", token ? "Present" : "Missing");
 
         if (!token) {
@@ -52,7 +54,7 @@ const OrderDetails = () => {
         }
 
         const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE}/orders/${orderId}`,
+          `${import.meta.env.VITE_ORDERS}/${orderId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -137,18 +139,7 @@ const OrderDetails = () => {
     });
   };
 
-  const openWhatsApp = (phoneNumber) => {
-    // Remove any non-digit characters and ensure it starts with country code
-    const cleanNumber = phoneNumber.replace(/\D/g, "");
-    const whatsappNumber = cleanNumber.startsWith("20")
-      ? cleanNumber
-      : `20${cleanNumber}`;
-    const message = `مرحباً، أريد التواصل بخصوص الطلب ${order?.orderNumber}`;
-    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-      message
-    )}`;
-    window.open(whatsappUrl, "_blank");
-  };
+  // Removed WhatsApp contact functionality per requirements
 
   const handleCancelOrder = async () => {
     if (!cancelReason.trim()) {
@@ -160,7 +151,7 @@ const OrderDetails = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `${import.meta.env.VITE_API_BASE}/orders/${orderId}/cancel`,
+        `${import.meta.env.VITE_ORDERS}/${orderId}/cancel`,
         { reason: cancelReason },
         {
           headers: {
@@ -194,7 +185,7 @@ const OrderDetails = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `${import.meta.env.VITE_API_BASE}/orders/${orderId}/delivery-status`,
+        `${import.meta.env.VITE_ORDERS}/${orderId}/delivery-status`,
         {
           status: newStatus,
           deliveryNotes: deliveryNotes.trim() || undefined,
@@ -238,6 +229,38 @@ const OrderDetails = () => {
     // Can cancel: submitted, confirmed
     // Cannot cancel: delivered, cancelled, returned
     return ["submitted", "confirmed"].includes(order.status);
+  };
+
+  const canDeleteOrder = () => {
+    if (!order) return false;
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    if (user.role === "admin") return true;
+    return user.id === order.userId;
+  };
+
+  const handleDeleteOrder = async () => {
+    setDeleting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.delete(
+        `${import.meta.env.VITE_ORDERS}/${orderId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (response.data.success) {
+        alert("تم حذف الطلب بنجاح");
+        navigate("/orders");
+      }
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      alert(error.response?.data?.message || "حدث خطأ أثناء حذف الطلب");
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
+    }
   };
 
   const canUpdateStatus = () => {
@@ -365,6 +388,7 @@ const OrderDetails = () => {
                     إلغاء الطلب
                   </button>
                 )}
+                {/* Delete button moved to bottom of page */}
                 {canUpdateStatus() && (
                   <button
                     onClick={() => setShowStatusModal(true)}
@@ -434,18 +458,9 @@ const OrderDetails = () => {
                       {order.senderName}
                     </p>
                     {order.senderPhone && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center text-gray-600">
-                          <Phone className="w-4 h-4 ml-2" />
-                          <span className="text-sm">{order.senderPhone}</span>
-                        </div>
-                        <button
-                          onClick={() => openWhatsApp(order.senderPhone)}
-                          className="flex items-center bg-green-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-green-600 transition-colors"
-                        >
-                          <MessageCircle className="w-4 h-4 ml-1" />
-                          واتساب
-                        </button>
+                      <div className="flex items-center text-gray-600">
+                        <Phone className="w-4 h-4 ml-2" />
+                        <span className="text-sm">{order.senderPhone}</span>
                       </div>
                     )}
                   </div>
@@ -466,18 +481,9 @@ const OrderDetails = () => {
                       {order.receiverName}
                     </p>
                     {order.receiverPhone && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center text-gray-600">
-                          <Phone className="w-4 h-4 ml-2" />
-                          <span className="text-sm">{order.receiverPhone}</span>
-                        </div>
-                        <button
-                          onClick={() => openWhatsApp(order.receiverPhone)}
-                          className="flex items-center bg-green-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-green-600 transition-colors"
-                        >
-                          <MessageCircle className="w-4 h-4 ml-1" />
-                          واتساب
-                        </button>
+                      <div className="flex items-center text-gray-600">
+                        <Phone className="w-4 h-4 ml-2" />
+                        <span className="text-sm">{order.receiverPhone}</span>
                       </div>
                     )}
                   </div>
@@ -670,23 +676,7 @@ const OrderDetails = () => {
                         </span>
                       </div>
                     )}
-                    {order.DeliveryUser?.phone && (
-                      <div className="flex items-center justify-between mt-1">
-                        <div className="flex items-center text-gray-600">
-                          <Phone className="w-4 h-4 ml-1" />
-                          <span className="text-sm">
-                            {order.DeliveryUser.phone}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => openWhatsApp(order.DeliveryUser.phone)}
-                          className="flex items-center bg-green-500 text-white px-2 py-1 rounded-lg text-xs hover:bg-green-600 transition-colors"
-                        >
-                          <MessageCircle className="w-3 h-3 ml-1" />
-                          واتساب
-                        </button>
-                      </div>
-                    )}
+                    {/* Delivery phone hidden per requirements */}
                   </div>
                 </div>
               </div>
@@ -818,6 +808,20 @@ const OrderDetails = () => {
         </div>
       )}
 
+      {/* Bottom actions (non-fixed) */}
+      {canDeleteOrder() && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors font-medium shadow-md w-full sm:w-auto"
+            >
+              حذف الطلب
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Cancel Order Modal */}
       {showCancelModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -849,6 +853,36 @@ const OrderDetails = () => {
                 disabled={cancelling}
               >
                 {cancelling ? "جاري الإلغاء..." : "تأكيد الإلغاء"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Order Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">
+              حذف الطلب
+            </h3>
+            <p className="text-gray-600 mb-6 text-center">
+              هل أنت متأكد من حذف هذا الطلب بشكل نهائي؟
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                disabled={deleting}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleDeleteOrder}
+                className="flex-1 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+                disabled={deleting}
+              >
+                {deleting ? "جاري الحذف..." : "تأكيد الحذف"}
               </button>
             </div>
           </div>

@@ -131,6 +131,7 @@ export const generateSimplePDF = (order) => {
           @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap');
           @import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@200;300;400;500;600;700;800;900&display=swap');
           @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap');
+          @page { size: A4; margin: 0; }
           
           * {
             margin: 0;
@@ -139,126 +140,52 @@ export const generateSimplePDF = (order) => {
           }
           body {
             font-family: 'Cairo', 'Noto Naskh Arabic', 'Amiri', 'Arial', sans-serif;
-            margin: 5px;
+            margin: 0;
+            padding: 0;
             direction: rtl;
             text-align: right;
             color: #333;
-            line-height: 1.2;
-            font-size: 9px;
+            line-height: 1.5;
+            font-size: 13px;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-            width: 100%;
-            max-width: none;
+            width: 210mm;
+            min-height: 297mm;
+            background: #fff;
           }
           .header {
-            background: #c19a5b;
-            color: white;
-            padding: 6px;
-            text-align: center;
-            margin: -5px -5px 10px -5px;
-            border-radius: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10mm 8mm 6mm 8mm;
+            border-bottom: 2px solid #c19a5b;
+            color: #111827;
           }
           .header h1 {
             margin: 0;
-            font-size: 14px;
-            font-weight: bold;
+            font-size: 22px;
+            font-weight: 800;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
           }
           .header p {
             margin: 3px 0 0 0;
-            font-size: 8px;
-            font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
-          }
-          .order-info {
-            border-bottom: 2px solid #c19a5b;
-            padding-bottom: 6px;
-            margin-bottom: 10px;
-          }
-          .order-info h2 {
-            color: #c19a5b;
-            margin-bottom: 3px;
             font-size: 12px;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
-            font-weight: bold;
+            color: #6b7280;
           }
-          .order-info p {
-            margin: 1px 0;
-            font-size: 8px;
-            font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
-          }
-          .section {
-            margin-bottom: 8px;
-            page-break-inside: avoid;
-          }
-          .section h3 {
-            background: #f5f5f5;
-            padding: 4px 6px;
-            margin: 0 0 5px 0;
-            color: #333;
-            font-size: 10px;
-            border-right: 2px solid #c19a5b;
-            font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
-            font-weight: bold;
-          }
-          .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-            margin-bottom: 6px;
-          }
-          .info-box {
-            border: 1px solid #ddd;
-            padding: 5px;
-            border-radius: 3px;
-            background: #fafafa;
-          }
-          .info-box h4 {
-            color: #c19a5b;
-            margin: 0 0 3px 0;
-            font-size: 9px;
-            font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
-            font-weight: bold;
-          }
-          .info-box p {
-            margin: 1px 0;
-            font-size: 8px;
-            font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
-          }
-          .collection-box {
-            border: 2px solid #22c55e;
-            background: #f0fdf4;
-            padding: 6px;
-            border-radius: 3px;
-            text-align: center;
-            color: #22c55e;
-            font-size: 9px;
-            font-weight: bold;
-            margin: 4px 0;
-            font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
-          }
+          .order-meta { display: flex; gap: 6mm; align-items: center; padding: 0 8mm 0 8mm; }
+          .badge { background: #c19a5b; color: #fff; border-radius: 6px; padding: 2mm 4mm; font-size: 13px; font-weight: 800; }
+          .section { margin: 8mm; margin-bottom: 10mm; page-break-inside: avoid; }
+          .section h3 { padding: 0 0 4mm 0; margin: 0 0 5mm 0; color: #111827; font-size: 16px; border-bottom: 1.5px solid #e5e7eb; font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif; font-weight: 900; }
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; margin-bottom: 4mm; }
+          .info-box { border: 1px solid #e5e7eb; padding: 5mm; border-radius: 8px; background: #fafafa; }
+          .info-box h4 { color: #c19a5b; margin: 0 0 3mm 0; font-size: 14px; font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif; font-weight: 900; }
+          .info-box p { margin: 1mm 0; font-size: 13px; font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif; }
+          .collection-box { border: 2px solid #22c55e; background: #f0fdf4; padding: 6mm; border-radius: 8px; text-align: center; color: #22c55e; font-size: 14px; font-weight: 900; margin: 4mm 0; font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif; }
           
-          .shipping-box {
-            border: 2px solid #3b82f6;
-            background: #eff6ff;
-            padding: 6px;
-            border-radius: 3px;
-            text-align: center;
-            color: #1d4ed8;
-            font-size: 9px;
-            font-weight: bold;
-            margin: 4px 0;
-            font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
-          }
+          .shipping-box { border: 2px solid #3b82f6; background: #eff6ff; padding: 6mm; border-radius: 8px; text-align: center; color: #1d4ed8; font-size: 14px; font-weight: 900; margin: 4mm 0; font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif; }
           
-          .footer {
-            text-align: center;
-            margin-top: 10px;
-            padding-top: 6px;
-            border-top: 1px solid #ddd;
-            color: #666;
-            font-size: 7px;
-            font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
-          }
+          .footer { text-align: center; margin-top: 10mm; padding-top: 6mm; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px; font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif; }
           table {
             width: 100%;
             border-collapse: collapse;
@@ -293,25 +220,8 @@ export const generateSimplePDF = (order) => {
             color: #c19a5b;
             font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
           }
-          .buttons {
-            text-align: center;
-            margin: 15px 0;
-            gap: 8px;
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-          }
-          .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: bold;
-            transition: background-color 0.3s;
-            min-width: 80px;
-            font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
-          }
+          .buttons { text-align: center; margin: 12mm 0 0 0; gap: 6mm; display: flex; justify-content: center; flex-wrap: wrap; }
+          .btn { padding: 6mm 12mm; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 900; transition: background-color 0.3s; min-width: 36mm; font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif; }
           .btn-print {
             background: #c19a5b;
             color: white;
@@ -326,82 +236,10 @@ export const generateSimplePDF = (order) => {
           .btn-close:hover {
             background: #555;
           }
-          .creator-info {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 3px;
-            padding: 5px;
-            margin-top: 6px;
-          }
-          .creator-info h4 {
-            color: #c19a5b;
-            margin: 0 0 3px 0;
-            font-size: 9px;
-            font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
-            font-weight: bold;
-          }
-          .creator-info p {
-            margin: 1px 0;
-            font-size: 7px;
-            font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
-          }
-          @media print {
-            body { 
-              margin: 0;
-              font-size: 7px;
-              font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
-              width: 100%;
-              max-width: none;
-            }
-            .no-print { 
-              display: none !important;
-            }
-            .header {
-              margin: 0;
-              padding: 4px;
-            }
-            .section {
-              page-break-inside: avoid;
-              margin-bottom: 6px;
-            }
-            .info-grid {
-              display: block;
-            }
-            .info-box {
-              margin-bottom: 4px;
-            }
-            .header h1 {
-              font-size: 12px;
-            }
-            .order-info h2 {
-              font-size: 10px;
-            }
-            .section h3 {
-              font-size: 8px;
-              padding: 3px 4px;
-            }
-            .collection-box {
-              font-size: 7px;
-              padding: 4px;
-            }
-            .shipping-box {
-              font-size: 7px;
-              padding: 4px;
-            }
-            .info-box h4 {
-              font-size: 7px;
-            }
-            .info-box p {
-              font-size: 6px;
-            }
-            .creator-info p {
-              font-size: 6px;
-            }
-            table th, table td {
-              font-size: 6px;
-              padding: 2px 3px;
-            }
-          }
+          .creator-info { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 6mm; margin-top: 4mm; }
+          .creator-info h4 { color: #c19a5b; margin: 0 0 2mm 0; font-size: 14px; font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif; font-weight: 900; }
+          .creator-info p { margin: 1mm 0; font-size: 13px; font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif; }
+          @media print { body { margin: 0; font-size: 13px; font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif; width: 210mm; min-height: 297mm; } .no-print { display: none !important; } .header { padding: 8mm 8mm 6mm 8mm; } .section { page-break-inside: avoid; margin: 8mm; margin-bottom: 8mm; } .info-grid { grid-template-columns: 1fr 1fr; gap: 6mm; } }
           @media (max-width: 768px) {
             .info-grid {
               grid-template-columns: 1fr;
@@ -436,9 +274,6 @@ export const generateSimplePDF = (order) => {
             <div class="info-box">
               <h4>المستلم</h4>
               <p><strong>الاسم:</strong> ${order.receiverName || "غير محدد"}</p>
-              <p><strong>الهاتف:</strong> ${
-                order.receiverPhone || "غير محدد"
-              }</p>
             </div>
           </div>
         </div>
@@ -544,9 +379,6 @@ export const generateSimplePDF = (order) => {
               <h4>بيانات المندوب</h4>
               <p><strong>الاسم:</strong> ${
                 order.DeliveryUser.name || "غير محدد"
-              }</p>
-              <p><strong>رقم الهاتف:</strong> ${
-                order.DeliveryUser.phone || "غير محدد"
               }</p>
               ${
                 order.DeliveryUser.email

@@ -3,8 +3,13 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 
-// JWT Secret - should be in your .env file
-const JWT_SECRET = process.env.JWT_SECRET || "your_super_secret_key";
+// JWT Secret - required from environment
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.warn(
+    "JWT_SECRET is not set. Please configure it in your environment."
+  );
+}
 
 const verifyToken = (req, res, next) => {
   try {
